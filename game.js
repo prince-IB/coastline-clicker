@@ -159,11 +159,13 @@ scene("menu", () => {
 
 // CREDITS SCENE
 scene("credits", () => {
+    // Credits background image (resized to 1200x750)
     add([
-        sprite("credits_bg", { width: width(), height: height() }),
+        sprite("credits_bg"),
         pos(0, 0),
     ]);
 
+    // X button to go back - top right corner
     const xBtn = createButton("X", width() - 100, 100, 100, 100, 40);
 
     xBtn.onClick(() => {
