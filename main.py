@@ -1,4 +1,5 @@
 import pygame
+import asyncio
 from game import Button, Achievement
 import random
 import time
@@ -637,242 +638,251 @@ white = Button(pygame.Rect(10, 540, 350, 200), border_radius=0)
 flag_panel = Button(pygame.Rect(60, 542, 275, 175))
 flag_panel.image = pygame.transform.scale(flag.image, (250, 175))
 flag_panel.pressed_image = pygame.transform.scale(flag.image, (250, 175))
-running = True
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
 
+async def main():
+    global current_screen, current_upgrade_screen, current_flag, i, money, clicks
+    global money_per_second, base_money_per_second, multiplier, multiplier_active, multiplier_end_time
+    global money_per_click, upgrade_money_price, x, tick_speed, upgrade_tick_speed_price
+    global upgrade_money_per_second_price, per_tick_efficiency_upgrade, critical_clicks_price, critical_clicks_chance
+    global soldier_price, tank_price, plane_price, expedition_power, chance_of_success
+    global shipping, moving, available_to_buy, last_money_tick, coast_mi
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+
+            if current_screen == MENU:
+                if start_button.handle_event(event):
+                    select_.play()
+                    current_screen = COUNTRY
+                if credits_button.handle_event(event):
+                    current_screen = CREDITS
+            elif current_screen == GAME:
+                for button in game_buttons:
+                    button.handle_event(event)
+                if current_upgrade_screen == UPGRADE1:
+                    for button in upgrade_screen1_buttons:
+                        button.handle_event(event)
+                elif current_upgrade_screen == UPGRADE2:
+                    for button in upgrade_screen2_buttons:
+                        button.handle_event(event)
+                if ship_.handle_event(event):
+                    pass
+            elif current_screen == CREDITS:
+                if X_button.handle_event(event):
+                    current_screen = MENU
+            elif current_screen == COUNTRY:
+                if select.handle_event(event):
+                    select_.play()
+                    current_screen = GAME
+                    flag.image = current_flag
+                    flag_panel.image = pygame.transform.scale(current_flag, (250, 175))
+                    flag_panel.pressed_image = flag_panel.image
+                for button in country_buttons:
+                    button.handle_event(event)
         if current_screen == MENU:
-            if start_button.handle_event(event):
-                select_.play()
-                current_screen = COUNTRY
-            if credits_button.handle_event(event):
-                current_screen = CREDITS
+            screen.blit(menu_bg, (0,0))
+            start_button.draw(screen, font)
+            credits_button.draw(screen, font2)
         elif current_screen == GAME:
+            screen.blit(game_bg, (0,0))
+            wood_.draw(screen, font)
+            if expedition["state"] == "going":
+                done = True
+                for ss, _, _ in expedition["soldiers"]:
+                    if ss.rect.y > 350:
+                        ss.rect.y -= random.randint(1, 3)
+                        done = False
+                    else:
+                        ss.visible = False
+                for tt, _, _ in expedition["tanks"]:
+                    if tt.rect.y > 350:
+                        tt.rect.y -= random.randint(1, 3)
+                        done = False
+                    else:
+                        tt.visible = False
+                for pp, _, _ in expedition["planes"]:
+                    if pp.rect.y > 350:
+                        pp.rect.y -= random.randint(1, 3)
+                        done = False
+                    else:
+                        pp.visible = False
+                if done:
+                    expedition['state'] = 'returning'
+            elif expedition["state"] == "returning":
+                done = True
+                for ss, orig_x, orig_y in expedition["soldiers"]:
+                    if ss.rect.y < orig_y:
+                        ss.rect.y += 2
+                        done = False
+                    else:
+                        ss.visible = True
+                        ss.rect.x = orig_x
+                        ss.rect.y = orig_y
+                for tt, orig_x, orig_y in expedition["tanks"]:
+                    if tt.rect.y < orig_y:
+                        tt.rect.y += 3
+                        done = False
+                    else:
+                        tt.visible = True
+                        tt.rect.x = orig_x
+                        tt.rect.y = orig_y
+                for pp, orig_x, orig_y in expedition["planes"]:
+                    if pp.rect.y < orig_y:
+                        pp.rect.y += 4
+                        done = False
+                    else:
+                        pp.visible = True
+                        pp.rect.x = orig_x
+                        pp.rect.y = orig_y
+                if done:
+                    expedition_it()
+
+                    soldiers.extend([s[0] for s in expedition["soldiers"]])
+                    tanks.extend([t[0] for t in expedition["tanks"]])
+                    planes.extend([p[0] for p in expedition["planes"]])
+                    expedition["soldiers"].clear()
+                    expedition["tanks"].clear()
+                    expedition["planes"].clear()
+                    expedition["state"] = "idle"
+                    moving = False
+                    available_to_buy = True
+            if money_per_click < 10:
+                check_money(upgrade1, upgrade_money_price)
+            check_money(upgrade2, upgrade_money_per_second_price)
+            check_money(upgrade3, upgrade_tick_speed_price)
+            check_money(upgrade4, per_tick_efficiency_upgrade)
+            check_money(upgrade6, soldier_price)
+            check_money(upgrade7, tank_price)
+            check_money(upgrade8, plane_price)
+            check_expedition()
+            if critical_clicks_chance > 10:
+                check_money(upgrade5, critical_clicks_price)
+            else:
+                upgrade5.text[1] = 'MAX LEVEL'
+                upgrade5.color = (200, 200, 200)
+                upgrade5.pressed_text_color = (0, 0, 0)
+                critical_clicks_price = 99999999999
+            check_ascend(ascend_button)
+            money_per_second = int(base_money_per_second * multiplier)
+            now = pygame.time.get_ticks()
+            if money_per_second > 0 and now - last_money_tick >= tick_speed:
+                add_money_per_second()
+                last_money_tick = now
+            if multiplier_active and now >= multiplier_end_time:
+                multiplier = 1.0
+                multiplier_active = False
+                upgrade4.text = ['Multiply Money Per Tick', f'(30 seconds | Price = ${per_tick_efficiency_upgrade:.0f})']
+            elif multiplier_active and now < multiplier_end_time or money_per_second < 1:
+                upgrade4.color = (200,200,200)
+                upgrade4.pressed_text_color = (0,0,0)
+            white.draw(screen, font)
             for button in game_buttons:
-                button.handle_event(event)
+                if button == tick_speed_knowing:
+                    button.draw(screen, font5)
+                else:
+                    button.draw(screen, get_font_for_button(button))
+            for ss in soldiers[0:46]:
+                if ss.visible:
+                    ss.draw(screen, font)
+                chance_of_success = round(expedition_power, 1)
+                send_expedition.text = ['Send Expedition!', f'Chance of Success: {chance_of_success:.2f}%']
+            for tt in tanks[0:14]:
+                if tt.visible:
+                    tt.draw(screen, font)
+                chance_of_success = round(expedition_power, 1)
+                send_expedition.text = ['Send Expedition!', f'Chance of Success: {chance_of_success:.2f}%']
+            for pp in planes[0:8]:
+                if pp.visible:
+                    pp.draw(screen, font)
+                chance_of_success = round(expedition_power, 1)
+                send_expedition.text = ['Send Expedition!', f'Chance of Success: {chance_of_success:.2f}%']
+            mouse_pos_ = pygame.mouse.get_pos()
+            for soldier in soldiers[0:46]:
+                if soldier.rect.collidepoint(mouse_pos_):
+                    name_surf = font6.render(soldier.name, False, (255,255,255))
+                    name_rect = name_surf.get_rect(midbottom=(soldier.rect.centerx, soldier.rect.top - 2))
+                    screen.blit(name_surf, name_rect)
+            for tank in tanks[0:14]:
+                if tank.rect.collidepoint(mouse_pos_):
+                    name_surfer = font6.render(tank.name, False, (255,255,255))
+                    name_recter = name_surfer.get_rect(midbottom=(tank.rect.centerx, tank.rect.top + 4))
+                    screen.blit(name_surfer, name_recter)
+            for plane in planes[0:8]:
+                if plane.rect.collidepoint(mouse_pos_):
+                    name_surferer = font6.render(plane.name, False, (255,255,255))
+                    name_recterer = name_surferer.get_rect(midbottom=(plane.rect.centerx, plane.rect.top + 8))
+                    screen.blit(name_surferer, name_recterer)
             if current_upgrade_screen == UPGRADE1:
                 for button in upgrade_screen1_buttons:
-                    button.handle_event(event)
+                    button.draw(screen, get_font_for_button(button))
             elif current_upgrade_screen == UPGRADE2:
                 for button in upgrade_screen2_buttons:
-                    button.handle_event(event)
-            if ship_.handle_event(event):
-                pass
-        elif current_screen == CREDITS:
-            if X_button.handle_event(event):
-                current_screen = MENU
-        elif current_screen == COUNTRY:
-            if select.handle_event(event):
-                select_.play()
-                current_screen = GAME
-                flag.image = current_flag
-                flag_panel.image = pygame.transform.scale(current_flag, (250, 175))
-                flag_panel.pressed_image = flag_panel.image
-            for button in country_buttons:
-                button.handle_event(event)
-    if current_screen == MENU:
-        screen.blit(menu_bg, (0,0))
-        start_button.draw(screen, font)
-        credits_button.draw(screen, font2)
-    elif current_screen == GAME:
-        screen.blit(game_bg, (0,0))
-        wood_.draw(screen, font)
-        if expedition["state"] == "going":
-            done = True
+                    button.draw(screen, get_font_for_button(button))
+            flag_panel.draw(screen, font)
             for ss, _, _ in expedition["soldiers"]:
-                if ss.rect.y > 350:
-                    ss.rect.y -= random.randint(1, 3)
-                    done = False
-                else:
-                    ss.visible = False
+                if ss.visible and ss.rect.y < 590:
+                    ss.draw(screen, font)
+
             for tt, _, _ in expedition["tanks"]:
-                if tt.rect.y > 350:
-                    tt.rect.y -= random.randint(1, 3)
-                    done = False
-                else:
-                    tt.visible = False
+                if tt.visible and tt.rect.y < 590:
+                    tt.draw(screen, font)
+
             for pp, _, _ in expedition["planes"]:
-                if pp.rect.y > 350:
-                    pp.rect.y -= random.randint(1, 3)
-                    done = False
-                else:
-                    pp.visible = False
-            if done:
-                expedition['state'] = 'returning'
-        elif expedition["state"] == "returning":
-            done = True
-            for ss, orig_x, orig_y in expedition["soldiers"]:
-                if ss.rect.y < orig_y:
-                    ss.rect.y += 2
-                    done = False
-                else:
-                    ss.visible = True
-                    ss.rect.x = orig_x
-                    ss.rect.y = orig_y
-            for tt, orig_x, orig_y in expedition["tanks"]:
-                if tt.rect.y < orig_y:
-                    tt.rect.y += 3
-                    done = False
-                else:
-                    tt.visible = True
-                    tt.rect.x = orig_x
-                    tt.rect.y = orig_y
-            for pp, orig_x, orig_y in expedition["planes"]:
-                if pp.rect.y < orig_y:
-                    pp.rect.y += 4
-                    done = False
-                else:
-                    pp.visible = True
-                    pp.rect.x = orig_x
-                    pp.rect.y = orig_y
-            if done:
-                expedition_it()
+                if pp.visible and pp.rect.y < 590:
+                    pp.draw(screen, font)
 
-                soldiers.extend([s[0] for s in expedition["soldiers"]])
-                tanks.extend([t[0] for t in expedition["tanks"]])
-                planes.extend([p[0] for p in expedition["planes"]])
-                expedition["soldiers"].clear()
-                expedition["tanks"].clear()
-                expedition["planes"].clear()
-                expedition["state"] = "idle"
-                moving = False
-                available_to_buy = True
-        if money_per_click < 10:
-            check_money(upgrade1, upgrade_money_price)
-        check_money(upgrade2, upgrade_money_per_second_price)
-        check_money(upgrade3, upgrade_tick_speed_price)
-        check_money(upgrade4, per_tick_efficiency_upgrade)
-        check_money(upgrade6, soldier_price)
-        check_money(upgrade7, tank_price)
-        check_money(upgrade8, plane_price)
-        check_expedition()
-        if critical_clicks_chance > 10:
-            check_money(upgrade5, critical_clicks_price)
-        else:
-            upgrade5.text[1] = 'MAX LEVEL'
-            upgrade5.color = (200, 200, 200)
-            upgrade5.pressed_text_color = (0, 0, 0)
-            critical_clicks_price = 99999999999
-        check_ascend(ascend_button)
-        money_per_second = int(base_money_per_second * multiplier)
-        now = pygame.time.get_ticks()
-        if money_per_second > 0 and now - last_money_tick >= tick_speed:
-            add_money_per_second()
-            last_money_tick = now
-        if multiplier_active and now >= multiplier_end_time:
-            multiplier = 1.0
-            multiplier_active = False
-            upgrade4.text = ['Multiply Money Per Tick', f'(30 seconds | Price = ${per_tick_efficiency_upgrade:.0f})']
-        elif multiplier_active and now < multiplier_end_time or money_per_second < 1:
-            upgrade4.color = (200,200,200)
-            upgrade4.pressed_text_color = (0,0,0)
-        white.draw(screen, font)
-        for button in game_buttons:
-            if button == tick_speed_knowing:
-                button.draw(screen, font5)
-            else:
-                button.draw(screen, get_font_for_button(button))
-        for ss in soldiers[0:46]:
-            if ss.visible:
-                ss.draw(screen, font)
-            chance_of_success = round(expedition_power, 1)
-            send_expedition.text = ['Send Expedition!', f'Chance of Success: {chance_of_success:.2f}%']
-        for tt in tanks[0:14]:
-            if tt.visible:
-                tt.draw(screen, font)
-            chance_of_success = round(expedition_power, 1)
-            send_expedition.text = ['Send Expedition!', f'Chance of Success: {chance_of_success:.2f}%']
-        for pp in planes[0:8]:
-            if pp.visible:
-                pp.draw(screen, font)
-            chance_of_success = round(expedition_power, 1)
-            send_expedition.text = ['Send Expedition!', f'Chance of Success: {chance_of_success:.2f}%']
-        mouse_pos_ = pygame.mouse.get_pos()
-        for soldier in soldiers[0:46]:
-            if soldier.rect.collidepoint(mouse_pos_):
-                name_surf = font6.render(soldier.name, False, (255,255,255))
-                name_rect = name_surf.get_rect(midbottom=(soldier.rect.centerx, soldier.rect.top - 2))
-                screen.blit(name_surf, name_rect)
-        for tank in tanks[0:14]:
-            if tank.rect.collidepoint(mouse_pos_):
-                name_surfer = font6.render(tank.name, False, (255,255,255))
-                name_recter = name_surfer.get_rect(midbottom=(tank.rect.centerx, tank.rect.top + 4))
-                screen.blit(name_surfer, name_recter)
-        for plane in planes[0:8]:
-            if plane.rect.collidepoint(mouse_pos_):
-                name_surferer = font6.render(plane.name, False, (255,255,255))
-                name_recterer = name_surferer.get_rect(midbottom=(plane.rect.centerx, plane.rect.top + 8))
-                screen.blit(name_surferer, name_recterer)
-        if current_upgrade_screen == UPGRADE1:
-            for button in upgrade_screen1_buttons:
-                button.draw(screen, get_font_for_button(button))
-        elif current_upgrade_screen == UPGRADE2:
-            for button in upgrade_screen2_buttons:
-                button.draw(screen, get_font_for_button(button))
-        flag_panel.draw(screen, font)
-        for ss, _, _ in expedition["soldiers"]:
-            if ss.visible and ss.rect.y < 590:
-                ss.draw(screen, font)
-
-        for tt, _, _ in expedition["tanks"]:
-            if tt.visible and tt.rect.y < 590:
-                tt.draw(screen, font)
-
-        for pp, _, _ in expedition["planes"]:
-            if pp.visible and pp.rect.y < 590:
-                pp.draw(screen, font)
-
-        for ft in floating_texts[:]:
-            ft['y'] = ft['y'] - 1
-            text_surface = font3.render(ft['text'], True, (255, 255, 255))
-            screen.blit(text_surface, (ft['x'], ft['y']))
-            ft['timer'] = ft['timer'] - 1
-            if ft['timer'] <= 0:
-                floating_texts.remove(ft)
-        for ft2 in floating_texts2[:]:
-            ft2['y'] = ft2['y'] - 1
-            text_surface = font3.render(ft2['text'], True, (0, 0, 0))
-            screen.blit(text_surface, (ft2['x'], ft2['y']))
-            ft2['timer'] = ft2['timer'] - 1
-            if ft2['timer'] <= 0:
-                floating_texts2.remove(ft2)
-        if shipping is False:
-            if random.randint(1, ship_spawn_rate) == 1:
-                ship_.rect.y = random.randint(120, 470)
-                ship_.rect.x = -100
-                ship_.rect.width = 300
-                ship_.rect.height = 200
-                shipping = True
-        if shipping is True:
-            move(ship_)
-            ship_.draw(screen, font6)
-            if pygame.mouse.get_pressed()[0]:  # left mouse button
-                mouse_pos = pygame.mouse.get_pos()
-                if ship_.rect.collidepoint(mouse_pos):
+            for ft in floating_texts[:]:
+                ft['y'] = ft['y'] - 1
+                text_surface = font3.render(ft['text'], True, (255, 255, 255))
+                screen.blit(text_surface, (ft['x'], ft['y']))
+                ft['timer'] = ft['timer'] - 1
+                if ft['timer'] <= 0:
+                    floating_texts.remove(ft)
+            for ft2 in floating_texts2[:]:
+                ft2['y'] = ft2['y'] - 1
+                text_surface = font3.render(ft2['text'], True, (0, 0, 0))
+                screen.blit(text_surface, (ft2['x'], ft2['y']))
+                ft2['timer'] = ft2['timer'] - 1
+                if ft2['timer'] <= 0:
+                    floating_texts2.remove(ft2)
+            if shipping is False:
+                if random.randint(1, ship_spawn_rate) == 1:
+                    ship_.rect.y = random.randint(120, 470)
+                    ship_.rect.x = -100
+                    ship_.rect.width = 300
+                    ship_.rect.height = 200
+                    shipping = True
+            if shipping is True:
+                move(ship_)
+                ship_.draw(screen, font6)
+                if pygame.mouse.get_pressed()[0]:  # left mouse button
+                    mouse_pos = pygame.mouse.get_pos()
+                    if ship_.rect.collidepoint(mouse_pos):
+                        ship_.rect.width = 0
+                        ship_.rect.height = 0
+                        shipping = False
+                        ship_.action()
+                if ship_.rect.x > WIDTH:
+                    shipping = False
                     ship_.rect.width = 0
                     ship_.rect.height = 0
-                    shipping = False
-                    ship_.action()
-            if ship_.rect.x > WIDTH:
-                shipping = False
-                ship_.rect.width = 0
-                ship_.rect.height = 0
-    elif current_screen == CREDITS:
-        screen.blit(credits_bg, (0,0))
-        X_button.draw(screen, font)
-    elif current_screen == COUNTRY:
-        screen.blit(game_bg, (0,0))
-        select.draw(screen, font)
-        choose.draw(screen, font3)
-        flag.image = current_flag
-        flag.draw(screen, font6)
-        for button in country_buttons:
-            button.draw(screen, font4)
-    pygame.display.flip()
-    clock.tick(60)
-pygame.quit()
+        elif current_screen == CREDITS:
+            screen.blit(credits_bg, (0,0))
+            X_button.draw(screen, font)
+        elif current_screen == COUNTRY:
+            screen.blit(game_bg, (0,0))
+            select.draw(screen, font)
+            choose.draw(screen, font3)
+            flag.image = current_flag
+            flag.draw(screen, font6)
+            for button in country_buttons:
+                button.draw(screen, font4)
+        pygame.display.flip()
+        clock.tick(60)
+        await asyncio.sleep(0)
+    pygame.quit()
 
-# RUN IN TERMINAL: python3.11 -m pygbag --bind 0.0.0.0 main.py
+asyncio.run(main())
 
