@@ -120,6 +120,16 @@ function createButton(txt, x, y, w, h, textSize = 24, bgColor = [255, 255, 255])
     return btn;
 }
 
+// Unlock audio on any interaction
+let audioUnlocked = false;
+function unlockAudio() {
+    if (!audioUnlocked) {
+        // Play a silent/quiet sound to unlock audio context
+        play("click", { volume: 0.01 });
+        audioUnlocked = true;
+    }
+}
+
 // MENU SCENE
 scene("menu", () => {
     add([
@@ -127,10 +137,15 @@ scene("menu", () => {
         pos(0, 0),
     ]);
 
+    // Unlock audio on first tap anywhere
+    onClick(unlockAudio);
+    onTouchStart(unlockAudio);
+
     const startBtn = createButton("START", width() / 2, 500, 200, 100, 30);
     startBtn.label.color = rgb(0, 255, 0);
 
     startBtn.onClick(() => {
+        unlockAudio();
         play("select", { volume: 0.25 });
         go("country");
     });
@@ -243,8 +258,16 @@ scene("country", () => {
 
 // MAIN GAME SCENE
 scene("game", () => {
-    // Start background music
-    play("bgm", { loop: true, volume: 0.8 });
+    // Start background music on first interaction (mobile requires this)
+    let musicStarted = false;
+    const startMusic = () => {
+        if (!musicStarted) {
+            play("bgm", { loop: true, volume: 0.8 });
+            musicStarted = true;
+        }
+    };
+    onClick(startMusic);
+    onTouchStart(startMusic);
 
     // Background
     add([
