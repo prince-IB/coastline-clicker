@@ -1,9 +1,13 @@
-// Initialize Kaboom
+// Initialize Kaboom with responsive scaling
+const GAME_WIDTH = 1200;
+const GAME_HEIGHT = 750;
+
 kaboom({
-    width: 1200,
-    height: 750,
+    width: GAME_WIDTH,
+    height: GAME_HEIGHT,
     background: [200, 220, 230],
-    scale: 1,
+    letterbox: true,
+    touchToMouse: true,
     crisp: true,
 });
 
