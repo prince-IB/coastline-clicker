@@ -219,7 +219,7 @@ def add_soldier():
             'Missileman',
             'Grenadier'
 ])
-        soldier.hp = 50
+        soldier_.hp = 50
         soldier_.visible = True
         soldiers.append(soldier_)
         global expedition_power
