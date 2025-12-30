@@ -45,6 +45,9 @@ achievements = {
     'achievement10' : Achievement("A True Upgrade", 'Buy a Fighter Jet', criterion=1),
     'achievement11' : Achievement("Larger Than Bosnia's Coastline!", 'Gain 0.01 Miles of Coastline', criterion=0.01)
 }
+missing_ss = []
+missing_tt = []
+missing_pp = []
 floating_texts2 = []
 def expedition_it():
     global chance_of_success
@@ -54,6 +57,24 @@ def expedition_it():
     send_expedition.pressed_text_color = (0,0,0)
     if random.random() < (chance_of_success / 100):
         success.play()
+        for ss_ in soldiers:
+            ss_.hp = ss_.hp - random.randint(10, 30)
+            if ss_.hp <= 0:
+                missing_ss.append((ss_.rect.x, ss_.rect.y))
+                soldiers.remove(ss_)
+                expedition['soldiers'].remove(ss_)
+        for tt_ in tanks:
+            tt_.hp = tt_.hp - random.randint(30,50)
+            if tt_.hp <= 0:
+                missing_tt.append((tt_.rect.x, tt_.rect.y))
+                tanks.remove(tt_)
+                expedition['tanks'].remove(tt_)
+        for pp_ in planes:
+            pp_.hp = pp_.hp - random.randint(30,50)
+            if pp_.hp <= 0:
+                missing_pp.append((pp_.rect.x, pp_.rect.y))
+                planes.remove(pp_)
+                expedition['planes'].remove(pp_)
         coast_mi = round((coast_mi + expedition_power / 100) * (army_level / 2), 2)
         coast_knowing.text = f'Coastline: {coast_mi}mi'
     else:
@@ -121,6 +142,7 @@ def add_plane():
             'Mig 31 Foxhound',
             'F18'
 ])
+        plane.hp = 500
         plane.visible = True
         planes.append(plane)
         global expedition_power
@@ -163,6 +185,7 @@ def add_tank():
             'T-62',
             'T-72'
 ])
+        tank.hp = 250
         tank.visible = True
         tanks.append(tank)
         global expedition_power
@@ -195,6 +218,7 @@ def add_soldier():
             'Missileman',
             'Grenadier'
 ])
+        soldier.hp = 50
         soldier_.visible = True
         soldiers.append(soldier_)
         global expedition_power
