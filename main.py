@@ -38,14 +38,26 @@ expedition = {
 }
 achievements = {
     'achievement1' : Achievement('Free Money?', 'Click Money Button', 1, 'clicks'),
-    'achievement2' : Achievement('Clicking Novice', 'Click Money Button 10 Times', 10, 'clicks'),
-    'achievement3' : Achievement('Skilled Clicker', 'Click Money Button 100 Times', 100, 'clicks'),
+    'achievement2' : Achievement('Clicking Novice', 'Click Money Button 50 Times', 50, 'clicks'),
+    'achievement3' : Achievement('Skilled Clicker', 'Click Money Button 250 Times', 250, 'clicks'),
     'achievement4' : Achievement('Proficient Clicker', 'Click Money Button 500 Times', 500, 'clicks'),
-    'achievement6' : Achievement('Rich', 'Get to $1,000', 1000, 'money'),
+    'achievement12' : Achievement('Clicking Elite', 'Click Money Button 2500 Times', 2500, 'clicks'),
+    'achievement13' : Achievement('Legendary Clicker', 'Click Money Button 5000 Times', 5000, 'clicks'),
+    'achievement14' : Achievement('Clicking God', 'Click Money Button 10000 Times', 10000, 'clicks'),
+    'achievement6' : Achievement("Rollin' In It", 'Get to $1000', 1000, 'money'),
+    'achievement15' : Achievement('Fortune-Bearer', 'Get to $5000', 5000, 'money'),
+    'achievement16' : Achievement('Wealth-Magnet', 'Get to $10000', 10000, 'money'),
     'achievement7' : Achievement('Clicking Master', 'Click Money Button 1000 Times', 1000, 'clicks'),
     'achievement8' : Achievement('Squad Commander', 'Hire 5 Soldiers', 5, 'soldiers'),
-    'achievement9' : Achievement('A Real Upgrade', 'Buy an Infantry Tank', 1, 'tanks'),
-    'achievement10' : Achievement("A True Upgrade", 'Buy a Fighter Jet', 1, 'planes'),
+    'achievement17' : Achievement('Corporal', 'Hire 10 Soldiers', 10, 'soldiers'),
+    'achievement18' : Achievement('Lieutenant', 'Hire 20 Soldiers', 20, 'soldiers'),
+    'achievement19' : Achievement('Tank Handler', 'Buy 3 Infantry Tanks', 3, 'tanks'),
+    'achievement20' : Achievement('Tank Specialist', 'Buy 10 Infantry Tanks', 10, 'tanks'),
+    'achievement21' : Achievement("Sky's the Limit!", 'Buy 8 Fighter Jets', 8, 'planes'),
+    'achievement22' : Achievement("Ace Pilot", 'Buy 3 Fighter Jets', 3, 'planes'),
+    'achievement23' : Achievement('Air Dominator', 'Buy 5 Fighter Jets', 5, 'planes'),
+    'achievement9' : Achievement('Armored Novice', 'Buy an Infantry Tank', 1, 'tanks'),
+    'achievement10' : Achievement("Aviator", 'Buy a Fighter Jet', 1, 'planes'),
     'achievement11' : Achievement("More Than Bosnia's Coast!", 'Gain 0.01 Miles of Coastline', 0.01, 'coast')
 }
 
@@ -558,7 +570,7 @@ current_upgrade_screen = UPGRADE1
 country_name = str(random.choice(name))
 
 #variables
-money = 100000
+money = 0
 army_level = 1
 coast_mi = 0.00
 coast_percent = 0.00
