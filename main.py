@@ -1,7 +1,6 @@
-# rect y < 395
 import pygame
 import asyncio
-from game import Button, Achievement
+from game import Button, Achievement, AchievementPopup
 import random
 import time
 import os
@@ -27,8 +26,10 @@ font4 = pygame.font.Font(FONT_PATH, 50)
 font5 = pygame.font.Font(FONT_PATH, 10)
 font6 = pygame.font.Font(FONT_PATH, 7)
 font7 = pygame.font.Font(FONT_PATH, 12)
+font8 = pygame.font.Font(FONT_PATH, 13)
 clock = pygame.time.Clock()
 multiplier = 1.0
+achievement_popups = []
 expedition = {
     'soldiers':[],
     'tanks':[],
@@ -36,21 +37,26 @@ expedition = {
     'state':'idle'
 }
 achievements = {
-    'achievement1' : Achievement('Free Money?', 'Click Money Button', criterion=1),
-    'achievement2' : Achievement('Clicking Novice', 'Click Money Button 10 Times', criterion=10),
-    'achievement3' : Achievement('Skilled Clicker', 'Click Money Button 100 Times', criterion=100),
-    'achievement4' : Achievement('Proficient Clicker', 'Click Money Button 500 Times', criterion=500),
-    'achievement6' : Achievement('Rich', 'Get to $1,000', criterion=1000),
-    'achievement7' : Achievement('Clicking Master', 'Click Money Button 1000 Times', criterion=1000),
-    'achievement8' : Achievement('Squad Commander', 'Hire 5 Soldiers', criterion=5),
-    'achievement9' : Achievement('A Real Upgrade', 'Buy an Infantry Tank', criterion=1),
-    'achievement10' : Achievement("A True Upgrade", 'Buy a Fighter Jet', criterion=1),
-    'achievement11' : Achievement("Larger Than Bosnia's Coastline!", 'Gain 0.01 Miles of Coastline', criterion=0.01)
+    'achievement1' : Achievement('Free Money?', 'Click Money Button', 1, 'clicks'),
+    'achievement2' : Achievement('Clicking Novice', 'Click Money Button 10 Times', 10, 'clicks'),
+    'achievement3' : Achievement('Skilled Clicker', 'Click Money Button 100 Times', 100, 'clicks'),
+    'achievement4' : Achievement('Proficient Clicker', 'Click Money Button 500 Times', 500, 'clicks'),
+    'achievement6' : Achievement('Rich', 'Get to $1,000', 1000, 'money'),
+    'achievement7' : Achievement('Clicking Master', 'Click Money Button 1000 Times', 1000, 'clicks'),
+    'achievement8' : Achievement('Squad Commander', 'Hire 5 Soldiers', 5, 'soldiers'),
+    'achievement9' : Achievement('A Real Upgrade', 'Buy an Infantry Tank', 1, 'tanks'),
+    'achievement10' : Achievement("A True Upgrade", 'Buy a Fighter Jet', 1, 'planes'),
+    'achievement11' : Achievement("More Than Bosnia's Coast!", 'Gain 0.01 Miles of Coastline', 0.01, 'coast')
 }
+
 missing_ss = []
 missing_tt = []
 missing_pp = []
 floating_texts2 = []
+def show_achievement(name_, desc_):
+    popup = AchievementPopup(
+        name_, width=300, height=60, name2=desc_)
+    achievement_popups.append(popup)
 def expedition_it():
     global chance_of_success
     global expedition
@@ -72,22 +78,28 @@ def expedition_it():
             missing_ss.append(orig_y)
             expedition['soldiers'].remove(entry)
             expedition_power = expedition_power - 0.1
+            chance_of_success = round(expedition_power * 100, 2)
+            send_expedition.text[1] = f'Chance of success: {chance_of_success}%'
     for entry in expedition['tanks'][:]:
         tt, orig_x, orig_y = entry
-        tt.hp = tt.hp - random.randint(20, 40)
+        tt.hp = tt.hp - random.randint(40, 80)
         if tt.hp <= 0:
             missing_tt.append(orig_x)
             missing_tt.append(orig_y)
             expedition['tanks'].remove(entry)
             expedition_power = expedition_power - 1
+            chance_of_success = round(expedition_power * 100, 2)
+            send_expedition.text[1] = f'Chance of success: {chance_of_success}%'
     for entry in expedition['planes'][:]:
         pp, orig_x, orig_y = entry
-        pp.hp = pp.hp - random.randint(10, 20)
+        pp.hp = pp.hp - random.randint(80, 160)
         if pp.hp <= 0:
             missing_pp.append(orig_x)
             missing_pp.append(orig_y)
             expedition['planes'].remove(entry)
             expedition_power = expedition_power - 5
+            chance_of_success = round(expedition_power * 100, 2)
+            send_expedition.text[1] = f'Chance of success: {chance_of_success}%'
 def send_an_expedition():
     global expedition
     global moving
@@ -694,6 +706,14 @@ flag_panel = Button(pygame.Rect(60, 542, 275, 175))
 flag_panel.image = pygame.transform.scale(flag.image, (250, 175))
 flag_panel.pressed_image = pygame.transform.scale(flag.image, (250, 175))
 
+stats = {
+    'clicks' : clicks,
+    'money' : money,
+    'soldiers' : len(expedition['soldiers']),
+    'tanks' : len(expedition['tanks']),
+    'planes' : len(expedition['planes']),
+    'coast' : coast_mi
+}
 async def main():
     global current_screen, current_upgrade_screen, current_flag, i, money, clicks
     global money_per_second, base_money_per_second, multiplier, multiplier_active, multiplier_end_time
@@ -743,6 +763,15 @@ async def main():
         elif current_screen == GAME:
             screen.blit(game_bg, (0,0))
             wood_.draw(screen, font)
+            stats['clicks'] = clicks
+            stats['money'] = money
+            stats['soldiers'] = len(expedition['soldiers']) or len(soldiers)
+            stats['tanks'] = len(expedition['tanks']) or len(tanks)
+            stats['planes'] = len(expedition['planes']) or len(planes)
+            stats['coast'] = coast_mi
+            for achievement in achievements.values():
+                if not achievement.met and achievement.check(stats[achievement.stat]):
+                    show_achievement(achievement.name, achievement.description)
             if expedition["state"] == "going":
                 done = True
                 for ss, _, _ in expedition["soldiers"]:
@@ -902,6 +931,11 @@ async def main():
                 ft2['timer'] = ft2['timer'] - 1
                 if ft2['timer'] <= 0:
                     floating_texts2.remove(ft2)
+            for popup in achievement_popups[:]:
+                if not popup.update():
+                    achievement_popups.remove(popup)
+            for popup in achievement_popups:
+                popup.draw_it(screen, font8, font7, font5)
             if shipping is False:
                 if random.randint(1, ship_spawn_rate) == 1:
                     ship_.rect.y = random.randint(120, 470)
