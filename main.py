@@ -1,3 +1,4 @@
+# rect y < 395
 import pygame
 import asyncio
 from game import Button, Achievement
@@ -214,6 +215,7 @@ def add_tank():
         global expedition_power
         expedition_power = expedition_power + 1
 def add_soldier():
+    print(missing_ss)
     global money
     global soldier_price
     global soldiers
@@ -836,34 +838,34 @@ async def main():
                     button.draw(screen, font5)
                 else:
                     button.draw(screen, get_font_for_button(button))
-            for ss in soldiers[0:46]:
-                if ss.visible:
+            for ss in soldiers:
+                if ss.visible and ss.rect.y < 395:
                     ss.draw(screen, font)
                 chance_of_success = round(expedition_power, 1)
                 send_expedition.text = ['Send Expedition!', f'Chance of Success: {chance_of_success:.2f}%']
-            for tt in tanks[0:14]:
-                if tt.visible:
+            for tt in tanks:
+                if tt.visible and tt.rect.y < 470:
                     tt.draw(screen, font)
                 chance_of_success = round(expedition_power, 1)
                 send_expedition.text = ['Send Expedition!', f'Chance of Success: {chance_of_success:.2f}%']
-            for pp in planes[0:8]:
-                if pp.visible:
+            for pp in planes:
+                if pp.visible and pp.rect.y < 590:
                     pp.draw(screen, font)
                 chance_of_success = round(expedition_power, 1)
                 send_expedition.text = ['Send Expedition!', f'Chance of Success: {chance_of_success:.2f}%']
             mouse_pos_ = pygame.mouse.get_pos()
-            for soldier in soldiers[0:46]:
-                if soldier.rect.collidepoint(mouse_pos_):
+            for soldier in soldiers:
+                if soldier.rect.collidepoint(mouse_pos_) and soldier.rect.y < 395:
                     name_surf = font6.render(soldier.name, False, (255,255,255))
                     name_rect = name_surf.get_rect(midbottom=(soldier.rect.centerx, soldier.rect.top - 2))
                     screen.blit(name_surf, name_rect)
-            for tank in tanks[0:14]:
-                if tank.rect.collidepoint(mouse_pos_):
+            for tank in tanks:
+                if tank.rect.collidepoint(mouse_pos_) and tank.rect.y < 470:
                     name_surfer = font6.render(tank.name, False, (255,255,255))
                     name_recter = name_surfer.get_rect(midbottom=(tank.rect.centerx, tank.rect.top + 4))
                     screen.blit(name_surfer, name_recter)
-            for plane in planes[0:8]:
-                if plane.rect.collidepoint(mouse_pos_):
+            for plane in planes:
+                if plane.rect.collidepoint(mouse_pos_) and plane.rect.y < 590:
                     name_surferer = font6.render(plane.name, False, (255,255,255))
                     name_recterer = name_surferer.get_rect(midbottom=(plane.rect.centerx, plane.rect.top + 8))
                     screen.blit(name_surferer, name_recterer)
@@ -938,4 +940,3 @@ async def main():
     pygame.quit()
 
 asyncio.run(main())
-
