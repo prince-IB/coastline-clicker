@@ -38,7 +38,7 @@ expedition = {
 }
 achievements = {
     'achievement1' : Achievement('Free Money?', 'Click Money Button', 1, 'clicks'),
-    'achievement2' : Achievement('Clicking Novice', 'Click Money Button 50 Times', 50, 'clicks'),
+    'achievement2' : Achievement('Clicking Novice', 'Click Money Button 100 Times', 100, 'clicks'),
     'achievement3' : Achievement('Skilled Clicker', 'Click Money Button 250 Times', 250, 'clicks'),
     'achievement4' : Achievement('Proficient Clicker', 'Click Money Button 500 Times', 500, 'clicks'),
     'achievement12' : Achievement('Clicking Elite', 'Click Money Button 2500 Times', 2500, 'clicks'),
@@ -552,6 +552,8 @@ upgrade = pygame.mixer.Sound('assets/sounds/upgrade.wav')
 money_click = pygame.mixer.Sound('assets/sounds/money_click.wav')
 downgrade = pygame.mixer.Sound('assets/sounds/downgrade.wav')
 success = pygame.mixer.Sound('assets/sounds/success.wav')
+swoosh = pygame.mixer.Sound('assets/sounds/swoosh.wav')
+swoosh_back = pygame.mixer.Sound('assets/sounds/swoosh2.wav')
 pygame.mixer.music.set_volume(0.8)
 pygame.mixer.music.play(-1)
 
@@ -783,7 +785,15 @@ async def main():
             stats['coast'] = coast_mi
             for achievement in achievements.values():
                 if not achievement.met and achievement.check(stats[achievement.stat]):
+                    swoosh.play()
                     show_achievement(achievement.name, achievement.description)
+                    achievement.met = True
+                    achievement.triggered_time = pygame.time.get_ticks()
+            for achievement in achievements.values():
+                if achievement.met and achievement.triggered_time:
+                    if pygame.time.get_ticks() - achievement.triggered_time >= 3000:
+                        swoosh_back.play()
+                        achievement.triggered_time = None
             if expedition["state"] == "going":
                 done = True
                 for ss, _, _ in expedition["soldiers"]:

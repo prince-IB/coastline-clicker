@@ -49,7 +49,7 @@ class AchievementPopup:
 
         elif self.state == "stay":
             self.timer += 1
-            if self.timer > 120:  # ~2 seconds at 60 FPS
+            if self.timer > 180:  # ~3 seconds at 60 FPS
                 self.state = "exit"
 
         elif self.state == "exit":
@@ -68,6 +68,7 @@ class Achievement:
         self.criterion = criterion
         self.met = False
         self.stat = stat
+        self.triggered_time = None
     def check(self, value):
         if not self.met and value >= self.criterion:
             self.met = True
