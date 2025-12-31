@@ -54,32 +54,39 @@ def expedition_it():
     global chance_of_success
     global expedition
     global coast_mi
+    global expedition_power
     send_expedition.color = (200, 200, 200)
     send_expedition.pressed_text_color = (0,0,0)
     if random.random() < (chance_of_success / 100):
         success.play()
-        for ss_ in soldiers:
-            ss_.hp = ss_.hp - random.randint(10, 30)
-            if ss_.hp <= 0:
-                missing_ss.append((ss_.rect.x, ss_.rect.y))
-                soldiers.remove(ss_)
-                expedition['soldiers'].remove(ss_)
-        for tt_ in tanks:
-            tt_.hp = tt_.hp - random.randint(30,50)
-            if tt_.hp <= 0:
-                missing_tt.append((tt_.rect.x, tt_.rect.y))
-                tanks.remove(tt_)
-                expedition['tanks'].remove(tt_)
-        for pp_ in planes:
-            pp_.hp = pp_.hp - random.randint(30,50)
-            if pp_.hp <= 0:
-                missing_pp.append((pp_.rect.x, pp_.rect.y))
-                planes.remove(pp_)
-                expedition['planes'].remove(pp_)
-        coast_mi = round((coast_mi + expedition_power / 100) * (army_level / 2), 2)
+        coast_mi = round((coast_mi + (expedition_power / 70) * (army_level / 1.3)), 2)
         coast_knowing.text = f'Coastline: {coast_mi}mi'
     else:
         downgrade.play()
+    for entry in expedition['soldiers'][:]:
+        ss, orig_x, orig_y = entry
+        ss.hp = ss.hp - random.randint(10, 20)
+        if ss.hp <= 0:
+            missing_ss.append(orig_x)
+            missing_ss.append(orig_y)
+            expedition['soldiers'].remove(entry)
+            expedition_power = expedition_power - 0.1
+    for entry in expedition['tanks'][:]:
+        tt, orig_x, orig_y = entry
+        tt.hp = tt.hp - random.randint(20, 40)
+        if tt.hp <= 0:
+            missing_tt.append(orig_x)
+            missing_tt.append(orig_y)
+            expedition['tanks'].remove(entry)
+            expedition_power = expedition_power - 1
+    for entry in expedition['planes'][:]:
+        pp, orig_x, orig_y = entry
+        pp.hp = pp.hp - random.randint(10, 20)
+        if pp.hp <= 0:
+            missing_pp.append(orig_x)
+            missing_pp.append(orig_y)
+            expedition['planes'].remove(entry)
+            expedition_power = expedition_power - 5
 def send_an_expedition():
     global expedition
     global moving
@@ -89,35 +96,38 @@ def send_an_expedition():
     expedition['soldiers'] = [(ss, ss.rect.x, ss.rect.y) for ss in soldiers]
     expedition['tanks'] = [(tt, tt.rect.x, tt.rect.y) for tt in tanks]
     expedition['planes'] = [(pp, pp.rect.x, pp.rect.y) for pp in planes]
-
     soldiers.clear()
     tanks.clear()
     planes.clear()
-
     expedition['state'] = 'going'
     moving = True
     available_to_buy = False
 def check_expedition():
     global chance_of_success
     global send_expedition
-    if chance_of_success < 0.1:
-        send_expedition.color = (200,200,200)
-        send_expedition.pressed_text_color = (0,0,0)
-    elif chance_of_success >= 100:
-        chance_of_success = 100
-        send_expedition.text[1] = f'Chance of Success: {chance_of_success}%'
-        upgrade6.color = (200,200,200)
-        upgrade6.pressed_text_color = (0, 0, 0)
-        upgrade6.text[1] = 'MAX LEVEL'
-        upgrade7.color = (200, 200, 200)
-        upgrade7.pressed_text_color = (0, 0, 0)
-        upgrade7.text[1] = 'MAX LEVEL'
-        upgrade8.color = (200, 200, 200)
-        upgrade8.pressed_text_color = (0, 0, 0)
-        upgrade8.text[1] = 'MAX LEVEL'
+    if chance_of_success < 100:
+        if chance_of_success < 0.1:
+            send_expedition.color = (200,200,200)
+            send_expedition.pressed_text_color = (0,0,0)
+        elif chance_of_success >= 100:
+            chance_of_success = 100
+            send_expedition.text[1] = f'Chance of Success: {chance_of_success}%'
+            upgrade6.color = (200,200,200)
+            upgrade6.pressed_text_color = (0, 0, 0)
+            upgrade6.text[1] = 'MAX LEVEL'
+            upgrade7.color = (200, 200, 200)
+            upgrade7.pressed_text_color = (0, 0, 0)
+            upgrade7.text[1] = 'MAX LEVEL'
+            upgrade8.color = (200, 200, 200)
+            upgrade8.pressed_text_color = (0, 0, 0)
+            upgrade8.text[1] = 'MAX LEVEL'
+        else:
+            send_expedition.color = (255, 255, 255)
+            send_expedition.pressed_text_color = (200, 200, 200)
     else:
-        send_expedition.color = (255, 255, 255)
-        send_expedition.pressed_text_color = (200, 200, 200)
+        send_expedition.color = (255,255,255)
+        chance_of_success = 100
+        return
 def add_plane():
     global money
     global plane_price
@@ -132,8 +142,14 @@ def add_plane():
         PLANE_W = 80
         GAP = 1
         MAX_PER_ROW = 4
-        x5 = 450 + (index % MAX_PER_ROW) * (PLANE_W + GAP)
-        y5 = 480 + (index // MAX_PER_ROW) * (PLANE_H + GAP)
+        if not missing_pp:
+            x5 = 450 + (index % MAX_PER_ROW) * (PLANE_W + GAP)
+            y5 = 480 + (index // MAX_PER_ROW) * (PLANE_H + GAP)
+        else:
+            x5 = missing_pp[0]
+            y5 = missing_pp[1]
+            missing_pp.pop(0)
+            missing_pp.pop(0)
         plane = Button(pygame.Rect(x5, y5, PLANE_W, PLANE_H), image=plane_, color=None)
         plane.name = random.choice([
             'F15',
@@ -162,8 +178,14 @@ def add_tank():
         TANK_H = 50
         GAP = 1
         MAX_PER_ROW = 7
-        x4 = 440 + (index % MAX_PER_ROW) * (TANK_W + GAP)
-        y4 = 410 + (index // MAX_PER_ROW) * (TANK_H + GAP)
+        if not missing_tt:
+            x4 = 440 + (index % MAX_PER_ROW) * (TANK_W + GAP)
+            y4 = 410 + (index // MAX_PER_ROW) * (TANK_H + GAP)
+        else:
+            x4 = missing_tt[0]
+            y4 = missing_tt[1]
+            missing_tt.pop(0)
+            missing_tt.pop(0)
         tank = Button(pygame.Rect(x4, y4, TANK_W, TANK_H), image=tank_, color=None)
         tank.name = random.choice([
             'Renault FT-17',
@@ -207,8 +229,14 @@ def add_soldier():
         SOLDIER_H = 16
         GAP = 7
         MAX_PER_ROW = 23
-        x3 = 450 + (index % MAX_PER_ROW) * (SOLDIER_W + GAP)
-        y3 = 370 + (index // MAX_PER_ROW) * (SOLDIER_H + GAP)
+        if not missing_ss:
+            x3 = 450 + (index % MAX_PER_ROW) * (SOLDIER_W + GAP)
+            y3 = 370 + (index // MAX_PER_ROW) * (SOLDIER_H + GAP)
+        else:
+            x3 = missing_ss[0]
+            y3 = missing_ss[1]
+            missing_ss.pop(0)
+            missing_ss.pop(0)
         soldier_ = Button(pygame.Rect(x3,y3,SOLDIER_W,SOLDIER_H), image=random.choice([soldier1_, soldier2_]), color=None)
         soldier_.name = random.choice([
             'Rifleman',
@@ -550,6 +578,7 @@ critical_clicks_price = 800
 critical_clicks_chance = 100
 moving = False
 available_to_buy = True
+
 #load images
 menu_bg = pygame.image.load("assets/Menu.png").convert()
 menu_bg = pygame.transform.scale(menu_bg, (WIDTH, HEIGHT))
@@ -854,7 +883,7 @@ async def main():
                     tt.draw(screen, font)
 
             for pp, _, _ in expedition["planes"]:
-                if pp.visible and pp.rect.y < 590:
+                if pp.visible and pp.rect.y < 570:
                     pp.draw(screen, font)
 
             for ft in floating_texts[:]:
