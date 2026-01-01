@@ -377,11 +377,10 @@ def increase_tick_speed():
     global tick_speed
     global upgrade_tick_speed_price
     global money
-    if money >= upgrade_tick_speed_price and tick_speed > 1:
+    if money >= upgrade_tick_speed_price and tick_speed > 50:
         upgrade.play()
         tick_speed = tick_speed - random.randint(35, 70)
-        if tick_speed <= 0:
-            tick_speed = 1
+        tick_speed = max(50, tick_speed)
         money = money - upgrade_tick_speed_price
         money_knowing.text = [f'You have ${money:.0f}', f'Money Per Tick: ${money_per_second}']
         tick_speed_knowing.text = f'Tick Speed: {tick_speed}ms'
@@ -393,7 +392,9 @@ def increase_tick_speed():
 def add_money_per_second():
     global money
     global money_per_second
-    click.play().set_volume(0.5)
+    ch = click.play()
+    if ch:
+        ch.set_volume(0.5)
     money = money + money_per_second
     money_knowing.text = [f'You have ${money:.0f}', f'Money Per Tick: ${money_per_second}']
 def upgrade_money_per_second():
@@ -544,7 +545,7 @@ def change_flag_down():
         click.play()
     current_flag = flags[i]
 
-pygame.mixer.music.load('assets/Game_BG_Music.wav')
+pygame.mixer.music.load('assets/Game_BG_Music.ogg')
 click = pygame.mixer.Sound('assets/sounds/click.wav')
 select_ = pygame.mixer.Sound('assets/sounds/select.wav')
 select_.set_volume(0.25)
@@ -555,7 +556,8 @@ success = pygame.mixer.Sound('assets/sounds/success.wav')
 swoosh = pygame.mixer.Sound('assets/sounds/swoosh.wav')
 swoosh_back = pygame.mixer.Sound('assets/sounds/swoosh2.wav')
 pygame.mixer.music.set_volume(0.8)
-pygame.mixer.music.play(-1)
+def start_music():
+    pygame.mixer.music.play(-1)
 
 
 with open('assets/country_names/country_names.txt', 'r') as names:
@@ -748,6 +750,7 @@ async def main():
             if current_screen == MENU:
                 if start_button.handle_event(event):
                     select_.play()
+                    start_music()
                     current_screen = COUNTRY
                 if credits_button.handle_event(event):
                     current_screen = CREDITS
