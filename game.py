@@ -1,7 +1,7 @@
 import pygame
 
 class AchievementPopup:
-    def __init__(self, name, name2, width, height):
+    def __init__(self, name, name2, width, height, font, small_font, smaller_font):
         self.name = name
         self.name2 = name2
         self.width = width
@@ -12,53 +12,47 @@ class AchievementPopup:
         self.target_y = 20
         self.speed = 6
 
-        self.timer = 0
-        self.state = "enter"
+        self.title_surf = font.render("Achievement Unlocked!", True, (218, 165, 32))
+        self.name_surf = small_font.render(name, True, (0, 0, 0))
+        self.desc_surf = smaller_font.render(name2, True, (0, 0, 0))
 
-    def draw_it(self, screen, font, small_font, smaller_font):
+        self.start_time = pygame.time.get_ticks()
+
+    def draw_it(self, screen):
         rect = pygame.Rect(self.x, self.y, self.width, self.height)
-        pygame.draw.rect(screen, (255, 255, 255), rect, border_radius=0)
-        pygame.draw.rect(screen, (0, 0, 0), rect, 2, border_radius=0)
-
-        title_surf = font.render("Achievement Unlocked!", True, (218, 165, 32))
-        name_surf = small_font.render(self.name, True, (0, 0, 0))
-        desc_surf = smaller_font.render(self.name2, True, (0,0,0))
-        screen.blit(
-            title_surf,
-            (self.x + (self.width - title_surf.get_width()) // 2,
-             self.y + 8)
-        )
+        pygame.draw.rect(screen, (255, 255, 255), rect)
+        pygame.draw.rect(screen, (0, 0, 0), rect, 2)
 
         screen.blit(
-            name_surf,
-            (self.x + (self.width - name_surf.get_width()) // 2,
-             self.y + 8 + title_surf.get_height())
+            self.title_surf,
+            (self.x + (self.width - self.title_surf.get_width()) // 2, self.y + 8)
+        )
+        screen.blit(
+            self.name_surf,
+            (self.x + (self.width - self.name_surf.get_width()) // 2,
+             self.y + 8 + self.title_surf.get_height())
+        )
+        screen.blit(
+            self.desc_surf,
+            (self.x + (self.width - self.desc_surf.get_width()) // 2,
+             self.y + 8 + self.title_surf.get_height() + self.name_surf.get_height())
         )
 
-        screen.blit(
-            desc_surf,
-            (self.x + (self.width - desc_surf.get_width()) // 2,
-             self.y + 8 + title_surf.get_height() + name_surf.get_height())
-        )
     def update(self):
-        if self.state == "enter":
-            self.y += self.speed
-            if self.y >= self.target_y:
-                self.y = self.target_y
-                self.state = "stay"
+        now = pygame.time.get_ticks()
+        elapsed = now - self.start_time
 
-        elif self.state == "stay":
-            self.timer += 1
-            if self.timer > 180:  # ~3 seconds at 60 FPS
-                self.state = "exit"
-
-        elif self.state == "exit":
-            self.y -= self.speed
-            if self.y < -self.height:
-                return False  # popup finished
+        if elapsed < 400:  # slide in
+            self.y = -self.height + (elapsed / 400) * (self.target_y + self.height)
+        elif elapsed < 2400:  # stay
+            self.y = self.target_y
+        elif elapsed < 3000:  # slide out
+            t = (elapsed - 2400) / 600
+            self.y = self.target_y - t * (self.height + 20)
+        else:
+            return False
 
         return True
-
 
 
 class Achievement:

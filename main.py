@@ -67,7 +67,7 @@ missing_pp = []
 floating_texts2 = []
 def show_achievement(name_, desc_):
     popup = AchievementPopup(
-        name_, width=300, height=60, name2=desc_)
+        name_, width=300, height=60, name2=desc_, font=font8, small_font=font7, smaller_font=font5)
     achievement_popups.append(popup)
 def expedition_it():
     global chance_of_success
@@ -660,6 +660,8 @@ tank_ = pygame.image.load('assets/button_images/tank.png')
 tank_ = pygame.transform.scale(tank_, (50,50))
 plane_ = pygame.image.load('assets/button_images/plane.png')
 plane_ = pygame.transform.scale(plane_, (80, 80))
+island_img = pygame.image.load('assets/button_images/island.png')
+island_img = pygame.transform.scale(island_img, (400, 450))
 flags = [flag1,flag2,flag3,flag5,flag6,flag7,flag8,flag9,flag10,flag11,flag12,flag13,flag14,flag15]
 current_flag = flags[0]
 i = 0
@@ -698,7 +700,9 @@ send_expedition = Button(pygame.Rect(415, 640, 400, 100), text=['Send Expedition
 coast_knowing = Button(pygame.Rect(415, 10, 400, 100), text=f'Coastline: {coast_mi}mi',text_color=(0,0,0), border_radius=0, pressed_text_color=(0,0,0))
 wood_ = Button(pygame.Rect(870,120,330,630), image=wood, pressed_image=wood)
 military = Button(pygame.Rect(415, 350, 400, 280), image=military_, pressed_image=military_, border_color=(0,0,0), border_width=3, border_radius=0)
-game_buttons = [money_button, money_knowing, name_of_country, ascend_button, black_line1, black_line2, the_thing, tick_speed_knowing, send_expedition, coast_knowing, military]
+island_border = Button(pygame.Rect(415, 120, 400, 220), border_color=(0,0,0), border_width=3, border_radius=0, color=None)
+island = Button(pygame.Rect(415, 5, 400, 220), image=island_img, pressed_image=island_img, border_color=(0,0,0), border_width=0, border_radius=0)
+game_buttons = [money_button, money_knowing, name_of_country, ascend_button, black_line1, black_line2, the_thing, tick_speed_knowing, send_expedition, coast_knowing, military, island, island_border]
 upgrade_screen1_buttons = [upgrade1, upgrade2, upgrade3, upgrade4, upgrade5, down_arrow]
 upgrade_screen2_buttons = [up_arrow, upgrade6, upgrade7, upgrade8]
 ship_ = Button(pygame.Rect(0,0,300,200), image=ship, color=None, text='Click me!', text_color=(0,0,0), action=random_event)
@@ -785,9 +789,9 @@ async def main():
             stats['coast'] = coast_mi
             for achievement in achievements.values():
                 if not achievement.met and achievement.check(stats[achievement.stat]):
+                    achievement.met = True
                     swoosh.play()
                     show_achievement(achievement.name, achievement.description)
-                    achievement.met = True
                     achievement.triggered_time = pygame.time.get_ticks()
             for achievement in achievements.values():
                 if achievement.met and achievement.triggered_time:
@@ -954,10 +958,10 @@ async def main():
                 if ft2['timer'] <= 0:
                     floating_texts2.remove(ft2)
             for popup in achievement_popups[:]:
-                if not popup.update():
+                alive = popup.update()
+                popup.draw_it(screen)
+                if not alive:
                     achievement_popups.remove(popup)
-            for popup in achievement_popups:
-                popup.draw_it(screen, font8, font7, font5)
             if shipping is False:
                 if random.randint(1, ship_spawn_rate) == 1:
                     ship_.rect.y = random.randint(120, 470)
@@ -994,5 +998,4 @@ async def main():
         clock.tick(60)
         await asyncio.sleep(0)
     pygame.quit()
-
 asyncio.run(main())
