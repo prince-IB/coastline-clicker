@@ -17,7 +17,7 @@ pygame.init()
 pygame.mixer.init()
 WIDTH, HEIGHT = 1200, 750
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Coastline Clicker INDEV")
+pygame.display.set_caption("Coastline Clicker BETA")
 FONT_PATH = 'assets/fonts/pixel_font.ttf'
 font = pygame.font.Font(FONT_PATH, 30)
 font2 = pygame.font.Font(FONT_PATH, 20)
@@ -29,6 +29,8 @@ font7 = pygame.font.Font(FONT_PATH, 12)
 font8 = pygame.font.Font(FONT_PATH, 13)
 clock = pygame.time.Clock()
 multiplier = 1.0
+reducer = 1.0
+reducer_end_time = 0
 achievement_popups = []
 expedition = {
     'soldiers':[],
@@ -46,6 +48,13 @@ achievements = {
     'achievement14' : Achievement('Clicking God', 'Click Money Button 10000 Times', 10000, 'clicks'),
     'achievement6' : Achievement("Rollin' In It", 'Get to $1000', 1000, 'money'),
     'achievement15' : Achievement('Fortune-Bearer', 'Get to $5000', 5000, 'money'),
+    'achievement24' : Achievement('The Golden Emperor', 'Get to $50000', 50000, 'money'),
+    'achievement25' : Achievement('Crowned in Cash', 'Get to $25000', 25000, 'money'),
+    'achievement26' : Achievement('The Lord of Riches', 'Get to $100000', 100000, 'money'),
+    'achievement27' : Achievement('The Infinite Treasury', 'Get to $500000', 500000, 'money'),
+    'achievement28' : Achievement('Magnificent Millionaire', 'Get to $1000000', 1000000, 'money'),
+    'achievement29' : Achievement('Elon Musk', 'Get to $717900000000', 717900000000, 'money'),
+    'achievement30' : Achievement('Cheater!', 'Cheat in $10000000000000000000000000000', 10000000000000000000000000000, 'money'),
     'achievement16' : Achievement('Wealth-Magnet', 'Get to $10000', 10000, 'money'),
     'achievement7' : Achievement('Clicking Master', 'Click Money Button 1000 Times', 1000, 'clicks'),
     'achievement8' : Achievement('Squad Commander', 'Hire 5 Soldiers', 5, 'soldiers'),
@@ -65,6 +74,57 @@ missing_ss = []
 missing_tt = []
 missing_pp = []
 floating_texts2 = []
+timer_start = None
+timer_duration = 10000
+def enhance_logistics():
+    global logistic_enhancement_price
+    global money
+    global enhancement_active
+    global reducer, reducer_end_time
+    global soldier_price, tank_price, plane_price
+    if money < logistic_enhancement_price:
+        return
+    upgrade.play()
+    reducer = 0.5
+    soldier_price *= reducer
+    tank_price *= reducer
+    plane_price *= reducer
+    enhancement_active = True
+    reducer_end_time = pygame.time.get_ticks()
+    money = money - logistic_enhancement_price
+    logistic_enhancement_price = round(logistic_enhancement_price * 1.21, 0)
+    upgrade10.text[1] = f'ACTIVE - 30s'
+    upgrade10.color = (200,200,200)
+    upgrade10.pressed_text_color = (0,0,0)
+    money_knowing.text[0] = f'You have ${money}'
+def heal_units():
+    global soldiers
+    global tanks
+    global planes
+    global money
+    global heal_price
+    global upgrade9
+    if money < heal_price or (len(planes) <= 0 and len(tanks) <= 0 and len(soldiers) <= 0) or (all(soldier.hp == 50 for soldier in soldiers) and all(plane.hp == 850 for plane in planes) and all(tank.hp == 250 for tank in tanks)):
+        upgrade9.color = (200,200,200)
+        upgrade9.pressed_text_color = (0,0,0)
+        return
+    upgrade.play()
+    for soldier in soldiers:
+        soldier.hp = soldier.hp + (soldier.hp/5)
+        if soldier.hp > 50:
+            soldier.hp = 50
+    for tank in tanks:
+        tank.hp = tank.hp + (tank.hp/5)
+        if tank.hp > 250:
+            tank.hp = 250
+    for plane in planes:
+        plane.hp = plane.hp + (plane.hp/5)
+        if plane.hp > 850:
+            plane.hp = 850
+    money -= heal_price
+    heal_price = round(heal_price * 1.2, 0)
+    upgrade9.text[1] = f'(Price = ${heal_price:.0f})'
+    money_knowing.text[0] = f'You have ${money:.0f}'
 def show_achievement(name_, desc_):
     popup = AchievementPopup(
         name_, width=300, height=60, name2=desc_, font=font8, small_font=font7, smaller_font=font5)
@@ -184,11 +244,13 @@ def add_plane():
             'Mig 31 Foxhound',
             'F18'
 ])
-        plane.hp = 500
+        plane.hp = 850
         plane.visible = True
         planes.append(plane)
         global expedition_power
         expedition_power = expedition_power + 5
+        if expedition_power >= 100:
+            expedition_power = 100
 def add_tank():
     global money
     global tank_price
@@ -238,6 +300,8 @@ def add_tank():
         tanks.append(tank)
         global expedition_power
         expedition_power = expedition_power + 1
+        if expedition_power >= 100:
+            expedition_power = 100
 def add_soldier():
     print(missing_ss)
     global money
@@ -278,6 +342,8 @@ def add_soldier():
         soldiers.append(soldier_)
         global expedition_power
         expedition_power = expedition_power + 0.1
+        if expedition_power >= 100:
+            expedition_power = 100
 def change_screen2():
     global current_upgrade_screen
     current_upgrade_screen = UPGRADE1
@@ -297,7 +363,7 @@ def increase_crit_chance():
         money = money - critical_clicks_price
         critical_clicks_price = round(critical_clicks_price * 1.3, 0)
         upgrade5.text = ['Upgrade CritClick Chance', f'(Price = ${critical_clicks_price:.0f})']
-        money_knowing.text[0] = f'You have: ${money:.0f}'
+        money_knowing.text[0] = f'You have ${money:.0f}'
     else:
         return
 def random_event():
@@ -384,7 +450,7 @@ def increase_tick_speed():
         money = money - upgrade_tick_speed_price
         money_knowing.text = [f'You have ${money:.0f}', f'Money Per Tick: ${money_per_second}']
         tick_speed_knowing.text = f'Tick Speed: {tick_speed}ms'
-        upgrade_tick_speed_price = round(upgrade_tick_speed_price * (1.25 * random.uniform(1.2, 1.3)),0)
+        upgrade_tick_speed_price = round(upgrade_tick_speed_price * (1.2 * random.uniform(1.1, 1.3)),0)
         upgrade3.text[1] = f'(Price = ${upgrade_tick_speed_price:.0f})'
     else:
         upgrade3.color = (200,200,200)
@@ -413,14 +479,16 @@ def get_font_for_button(button_):
         length2 = len(button_.text[1])
         if length1 != length2:
             if total_length >= 25:
-                if length1 <= 17:
+                if length1 <= 17 and button_ != upgrade10:
                     return font2, font7
+                elif button_ == upgrade10:
+                    return font7, font5
                 else:
                     return font7, font5
             elif 15 <= total_length <= 25:
                 return font5, font6
             else:
-                return font2, font5
+                return font2, font7
         elif length1 == length2 or (length1 + 1) == length2:
             return font3, font3
     elif isinstance(button_.text, str):
@@ -444,7 +512,10 @@ def check_ascend(button_):
 def check_money(button_, checker):
     global critical_clicks_price
     global upgrade_tick_speed_price
-    if tick_speed <= 1 and button_.action == increase_tick_speed:
+    if button_.action == heal_units and money < heal_price or (len(planes) <= 0 and len(tanks) <= 0 and len(soldiers) <= 0) or (all(soldier.hp == 50 for soldier in soldiers) and all(plane.hp == 850 for plane in planes) and all(tank.hp == 250 for tank in tanks)):
+        upgrade9.color = (200,200,200)
+        upgrade9.pressed_text_color = (0,0,0)
+    if tick_speed <= 50 and button_.action == increase_tick_speed:
         button_.text[1] = f'MAX LEVEL'
         button_.color = (200,200,200)
         button_.pressed_text_color = (0,0,0)
@@ -546,19 +617,19 @@ def change_flag_down():
     current_flag = flags[i]
 
 pygame.mixer.music.load('assets/Game_BG_Music.ogg')
-click = pygame.mixer.Sound('assets/sounds/click.wav')
-select_ = pygame.mixer.Sound('assets/sounds/select.wav')
+click = pygame.mixer.Sound('assets/sounds/click.ogg')
+select_ = pygame.mixer.Sound('assets/sounds/select.ogg')
 select_.set_volume(0.25)
-upgrade = pygame.mixer.Sound('assets/sounds/upgrade.wav')
-money_click = pygame.mixer.Sound('assets/sounds/money_click.wav')
-downgrade = pygame.mixer.Sound('assets/sounds/downgrade.wav')
-success = pygame.mixer.Sound('assets/sounds/success.wav')
-swoosh = pygame.mixer.Sound('assets/sounds/swoosh.wav')
-swoosh_back = pygame.mixer.Sound('assets/sounds/swoosh2.wav')
+upgrade = pygame.mixer.Sound('assets/sounds/upgrade.ogg')
+money_click = pygame.mixer.Sound('assets/sounds/money_click.ogg')
+downgrade = pygame.mixer.Sound('assets/sounds/downgrade.ogg')
+success = pygame.mixer.Sound('assets/sounds/success.ogg')
+swoosh = pygame.mixer.Sound('assets/sounds/swoosh.ogg')
+swoosh_back = pygame.mixer.Sound('assets/sounds/swoosh2.ogg')
 pygame.mixer.music.set_volume(0.8)
 def start_music():
     pygame.mixer.music.play(-1)
-
+start_music()
 
 with open('assets/country_names/country_names.txt', 'r') as names:
     name = names.read().splitlines()
@@ -574,7 +645,7 @@ current_upgrade_screen = UPGRADE1
 country_name = str(random.choice(name))
 
 #variables
-money = 0
+money = 123
 army_level = 1
 coast_mi = 0.00
 coast_percent = 0.00
@@ -606,8 +677,11 @@ ship_spawn_rate = 4321
 spawn_end_time = 20_000
 critical_clicks_price = 800
 critical_clicks_chance = 100
+heal_price = 1750
 moving = False
 available_to_buy = True
+logistic_enhancement_price = 3000
+enhancement_active = False
 
 #load images
 menu_bg = pygame.image.load("assets/Menu.png").convert()
@@ -691,6 +765,8 @@ upgrade5 = Button(pygame.Rect(890, 335, 300, 75), text=['Upgrade CritClick Chanc
 upgrade6 = Button(pygame.Rect(890, 250, 300, 75), text=['Hire Infantry Soldier', f'(Price = ${soldier_price})'], text_color=(0,0,0), action=add_soldier)
 upgrade7 = Button(pygame.Rect(890, 335, 300, 75), text=['Purchase Infantry Tank', f'(Price = ${tank_price})'], text_color=(0,0,0), action=add_tank)
 upgrade8 = Button(pygame.Rect(890, 420, 300, 75), text=['Purchase Fighter Jet', f'(Price = ${plane_price})'], text_color=(0,0,0), action=add_plane)
+upgrade9 = Button(pygame.Rect(890, 505, 300, 75), text=['Heal Military Units', f'(Price = ${heal_price})'], text_color=(0,0,0), action=heal_units)
+upgrade10 = Button(pygame.Rect(890, 590, 300, 75), text=['Enhance Logistics', f'30 Seconds | (Price = ${logistic_enhancement_price})'], action=enhance_logistics)
 down_arrow = Button(pygame.Rect(890, 675, 300, 75), text=[' PRESS TO GO TO  ','MILITARY UPGRADES'], text_color=(0,255,0), action=change_screen)
 up_arrow = Button(pygame.Rect(890, 675, 300, 75), text=['PRESS TO GO TO','MONEY UPGRADES'], text_color=(0,255,0), action=change_screen2)
 the_thing = Button(pygame.Rect(890, 140, 300, 100), text = 'UPGRADES SHOP!', text_color=(0,0,0), pressed_text_color=(0,0,0), border_radius=0)
@@ -706,7 +782,7 @@ island_border = Button(pygame.Rect(415, 120, 400, 220), border_color=(0,0,0), bo
 island = Button(pygame.Rect(415, 5, 400, 220), image=island_img, pressed_image=island_img, border_color=(0,0,0), border_width=0, border_radius=0)
 game_buttons = [money_button, money_knowing, name_of_country, ascend_button, black_line1, black_line2, the_thing, tick_speed_knowing, send_expedition, coast_knowing, military, island, island_border]
 upgrade_screen1_buttons = [upgrade1, upgrade2, upgrade3, upgrade4, upgrade5, down_arrow]
-upgrade_screen2_buttons = [up_arrow, upgrade6, upgrade7, upgrade8]
+upgrade_screen2_buttons = [up_arrow, upgrade6, upgrade7, upgrade8, upgrade9, upgrade10]
 ship_ = Button(pygame.Rect(0,0,300,200), image=ship, color=None, text='Click me!', text_color=(0,0,0), action=random_event)
 
 #country buttons
@@ -750,7 +826,6 @@ async def main():
             if current_screen == MENU:
                 if start_button.handle_event(event):
                     select_.play()
-                    start_music()
                     current_screen = COUNTRY
                 if credits_button.handle_event(event):
                     current_screen = CREDITS
@@ -811,13 +886,13 @@ async def main():
                         ss.visible = False
                 for tt, _, _ in expedition["tanks"]:
                     if tt.rect.y > 350:
-                        tt.rect.y -= random.randint(1, 3)
+                        tt.rect.y -= random.randint(3, 6)
                         done = False
                     else:
                         tt.visible = False
                 for pp, _, _ in expedition["planes"]:
                     if pp.rect.y > 350:
-                        pp.rect.y -= random.randint(1, 3)
+                        pp.rect.y -= random.randint(5, 9)
                         done = False
                     else:
                         pp.visible = False
@@ -869,6 +944,8 @@ async def main():
             check_money(upgrade6, soldier_price)
             check_money(upgrade7, tank_price)
             check_money(upgrade8, plane_price)
+            check_money(upgrade9, heal_price)
+            check_money(upgrade10, logistic_enhancement_price)
             check_expedition()
             if critical_clicks_chance > 10:
                 check_money(upgrade5, critical_clicks_price)
@@ -890,6 +967,19 @@ async def main():
             elif multiplier_active and now < multiplier_end_time or money_per_second < 1:
                 upgrade4.color = (200,200,200)
                 upgrade4.pressed_text_color = (0,0,0)
+            global enhancement_active, reducer
+            if enhancement_active and now >= reducer_end_time:
+                reducer = 1
+                soldier_price *= reducer
+                tank_price *= reducer
+                plane_price *= reducer
+                upgrade6.text = upgrade6.text
+                upgrade7.text = upgrade7.text
+                upgrade8.text = upgrade8.text
+                upgrade10.text[1] = f'30 Seconds | (Price = ${logistic_enhancement_price})'
+                upgrade10.color = (255, 255, 255)
+                upgrade10.pressed_text_color = (200, 200, 200)
+                enhancement_active = False
             white.draw(screen, font)
             for button in game_buttons:
                 if button == tick_speed_knowing:
@@ -967,15 +1057,16 @@ async def main():
                     achievement_popups.remove(popup)
             if shipping is False:
                 if random.randint(1, ship_spawn_rate) == 1:
-                    ship_.rect.y = random.randint(120, 470)
+                    ship_.rect.y = random.randint(500, 600)
                     ship_.rect.x = -100
                     ship_.rect.width = 300
                     ship_.rect.height = 200
                     shipping = True
             if shipping is True:
                 move(ship_)
-                ship_.draw(screen, font6)
-                if pygame.mouse.get_pressed()[0]:  # left mouse button
+                if ship_.rect.x > 10:
+                    ship_.draw(screen, font6)
+                if pygame.mouse.get_pressed()[0]:
                     mouse_pos = pygame.mouse.get_pos()
                     if ship_.rect.collidepoint(mouse_pos):
                         ship_.rect.width = 0
