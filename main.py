@@ -13,8 +13,21 @@ except:
 last_money_tick = pygame.time.get_ticks()
 ship_frenzy_tick = pygame.time.get_ticks()
 random.seed(seed)
+pygame.mixer.pre_init(44100, -16, 2, 1024)
 pygame.init()
 pygame.mixer.init()
+pygame.mixer.music.load('assets/bg_msc.mp3')
+pygame.mixer.music.play()
+click = pygame.mixer.Sound('assets/sounds/click.mp3')
+select_ = pygame.mixer.Sound('assets/sounds/select.mp3')
+select_.set_volume(0.25)
+upgrade = pygame.mixer.Sound('assets/sounds/upgrade.mp3')
+money_click = pygame.mixer.Sound('assets/sounds/money_click.mp3')
+downgrade = pygame.mixer.Sound('assets/sounds/downgrade.mp3')
+success = pygame.mixer.Sound('assets/sounds/success.mp3')
+swoosh = pygame.mixer.Sound('assets/sounds/swoosh.mp3')
+swoosh_back = pygame.mixer.Sound('assets/sounds/swoosh2.mp3')
+empty_sound = pygame.mixer.Sound(buffer=bytearray([0]*44100))
 WIDTH, HEIGHT = 1200, 750
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Coastline Clicker BETA")
@@ -32,6 +45,8 @@ multiplier = 1.0
 reducer = 1.0
 reducer_end_time = 0
 achievement_popups = []
+achievement_queue = []
+current_popup = None
 expedition = {
     'soldiers':[],
     'tanks':[],
@@ -74,8 +89,6 @@ missing_ss = []
 missing_tt = []
 missing_pp = []
 floating_texts2 = []
-timer_start = None
-timer_duration = 10000
 def enhance_logistics():
     global logistic_enhancement_price
     global money
@@ -86,17 +99,21 @@ def enhance_logistics():
         return
     upgrade.play()
     reducer = 0.5
-    soldier_price *= reducer
-    tank_price *= reducer
-    plane_price *= reducer
+    soldier_price = soldier_price * reducer
+    tank_price = tank_price * reducer
+    plane_price = plane_price * reducer
+    upgrade6.text[1] = f'(Price = ${soldier_price:.0f})'
+    upgrade7.text[1] = f'(Price = ${tank_price:.0f})'
+    upgrade8.text[1] = f'(Price = ${plane_price:.0f})'
     enhancement_active = True
     reducer_end_time = pygame.time.get_ticks()
     money = money - logistic_enhancement_price
-    logistic_enhancement_price = round(logistic_enhancement_price * 1.21, 0)
-    upgrade10.text[1] = f'ACTIVE - 30s'
+    logistic_enhancement_price = round(logistic_enhancement_price * 1.1543, 0)
+    upgrade10.text[1] = f'(ACTIVE - 30s)'
     upgrade10.color = (200,200,200)
     upgrade10.pressed_text_color = (0,0,0)
-    money_knowing.text[0] = f'You have ${money}'
+    money_knowing.text[0] = f'You have ${money:.0f}'
+    reducer_end_time = 30000
 def heal_units():
     global soldiers
     global tanks
@@ -128,7 +145,7 @@ def heal_units():
 def show_achievement(name_, desc_):
     popup = AchievementPopup(
         name_, width=300, height=60, name2=desc_, font=font8, small_font=font7, smaller_font=font5)
-    achievement_popups.append(popup)
+    return popup
 def expedition_it():
     global chance_of_success
     global expedition
@@ -616,24 +633,8 @@ def change_flag_down():
         click.play()
     current_flag = flags[i]
 
-pygame.mixer.music.load('assets/Game_BG_Music.ogg')
-click = pygame.mixer.Sound('assets/sounds/click.ogg')
-select_ = pygame.mixer.Sound('assets/sounds/select.ogg')
-select_.set_volume(0.25)
-upgrade = pygame.mixer.Sound('assets/sounds/upgrade.ogg')
-money_click = pygame.mixer.Sound('assets/sounds/money_click.ogg')
-downgrade = pygame.mixer.Sound('assets/sounds/downgrade.ogg')
-success = pygame.mixer.Sound('assets/sounds/success.ogg')
-swoosh = pygame.mixer.Sound('assets/sounds/swoosh.ogg')
-swoosh_back = pygame.mixer.Sound('assets/sounds/swoosh2.ogg')
-pygame.mixer.music.set_volume(0.8)
-def start_music():
-    pygame.mixer.music.play(-1)
-start_music()
-
 with open('assets/country_names/country_names.txt', 'r') as names:
     name = names.read().splitlines()
-
 CREDITS = 'credits'
 MENU = 'menu'
 GAME = 'game'
@@ -645,7 +646,7 @@ current_upgrade_screen = UPGRADE1
 country_name = str(random.choice(name))
 
 #variables
-money = 123
+money = 100000
 army_level = 1
 coast_mi = 0.00
 coast_percent = 0.00
@@ -816,16 +817,20 @@ async def main():
     global money_per_click, upgrade_money_price, x, tick_speed, upgrade_tick_speed_price
     global upgrade_money_per_second_price, per_tick_efficiency_upgrade, critical_clicks_price, critical_clicks_chance
     global soldier_price, tank_price, plane_price, expedition_power, chance_of_success
-    global shipping, moving, available_to_buy, last_money_tick, coast_mi
+    global shipping, moving, available_to_buy, last_money_tick, coast_mi, enhancement_active, reducer, reducer_end_time
     running = True
     while running:
         for event in pygame.event.get():
+            if event.type in (pygame.MOUSEBUTTONDOWN, pygame.FINGERDOWN):
+                if not pygame.mixer.music.get_busy():
+                    pass
+                else:
+                    pass
             if event.type == pygame.QUIT:
                 running = False
 
             if current_screen == MENU:
                 if start_button.handle_event(event):
-                    select_.play()
                     current_screen = COUNTRY
                 if credits_button.handle_event(event):
                     current_screen = CREDITS
@@ -868,14 +873,14 @@ async def main():
             for achievement in achievements.values():
                 if not achievement.met and achievement.check(stats[achievement.stat]):
                     achievement.met = True
-                    swoosh.play()
-                    show_achievement(achievement.name, achievement.description)
+                    achievement_queue.append(achievement)
                     achievement.triggered_time = pygame.time.get_ticks()
-            for achievement in achievements.values():
-                if achievement.met and achievement.triggered_time:
-                    if pygame.time.get_ticks() - achievement.triggered_time >= 3000:
-                        swoosh_back.play()
-                        achievement.triggered_time = None
+            global current_popup
+            if current_popup is None and len(achievement_queue) > 0:
+                achievement_queue.sort(key = lambda it: it.criterion)
+                next_ach = achievement_queue.pop(0)
+                swoosh.play()
+                current_popup = show_achievement(next_ach.name, next_ach.description)
             if expedition["state"] == "going":
                 done = True
                 for ss, _, _ in expedition["soldiers"]:
@@ -945,7 +950,8 @@ async def main():
             check_money(upgrade7, tank_price)
             check_money(upgrade8, plane_price)
             check_money(upgrade9, heal_price)
-            check_money(upgrade10, logistic_enhancement_price)
+            if enhancement_active is False:
+                check_money(upgrade10, logistic_enhancement_price)
             check_expedition()
             if critical_clicks_chance > 10:
                 check_money(upgrade5, critical_clicks_price)
@@ -967,19 +973,22 @@ async def main():
             elif multiplier_active and now < multiplier_end_time or money_per_second < 1:
                 upgrade4.color = (200,200,200)
                 upgrade4.pressed_text_color = (0,0,0)
-            global enhancement_active, reducer
             if enhancement_active and now >= reducer_end_time:
-                reducer = 1
-                soldier_price *= reducer
-                tank_price *= reducer
-                plane_price *= reducer
-                upgrade6.text = upgrade6.text
-                upgrade7.text = upgrade7.text
-                upgrade8.text = upgrade8.text
-                upgrade10.text[1] = f'30 Seconds | (Price = ${logistic_enhancement_price})'
+                reducer = 2
+                reducer_end_time = 0
+                soldier_price = soldier_price * reducer
+                tank_price = tank_price * reducer
+                plane_price = plane_price * reducer
+                upgrade6.text[1] = f'(Price = ${soldier_price:.0f})'
+                upgrade7.text[1] = f'(Price = ${tank_price:.0f})'
+                upgrade8.text[1] = f'(Price = ${plane_price:.0f})'
+                upgrade10.text[1] = f'30 Seconds | (Price = ${logistic_enhancement_price:.0f})'
                 upgrade10.color = (255, 255, 255)
                 upgrade10.pressed_text_color = (200, 200, 200)
                 enhancement_active = False
+            elif enhancement_active and now < reducer_end_time:
+                upgrade10.color = (200,200,200)
+                upgrade10.pressed_text_color = (0,0,0)
             white.draw(screen, font)
             for button in game_buttons:
                 if button == tick_speed_knowing:
@@ -1050,11 +1059,12 @@ async def main():
                 ft2['timer'] = ft2['timer'] - 1
                 if ft2['timer'] <= 0:
                     floating_texts2.remove(ft2)
-            for popup in achievement_popups[:]:
-                alive = popup.update()
-                popup.draw_it(screen)
+            if current_popup:
+                alive = current_popup.update()
+                current_popup.draw_it(screen)
                 if not alive:
-                    achievement_popups.remove(popup)
+                    swoosh_back.play()
+                    current_popup = None
             if shipping is False:
                 if random.randint(1, ship_spawn_rate) == 1:
                     ship_.rect.y = random.randint(500, 600)
@@ -1093,3 +1103,5 @@ async def main():
         await asyncio.sleep(0)
     pygame.quit()
 asyncio.run(main())
+
+#stinking butthole fart peepee smelly doodoo diarrhea toilet poopoo garbage trash rubbish tinkle gut butt-smelling booty-face durr durr keeps black-screening
