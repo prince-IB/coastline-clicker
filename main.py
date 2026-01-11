@@ -10,24 +10,35 @@ try:
     seed = int.from_bytes(os.urandom(8), 'big')
 except:
     seed = int(time.time())
-last_money_tick = pygame.time.get_ticks()
-ship_frenzy_tick = pygame.time.get_ticks()
 random.seed(seed)
 pygame.mixer.pre_init(44100, -16, 2, 1024)
 pygame.init()
 pygame.mixer.init()
-pygame.mixer.music.load('assets/bg_msc.mp3')
-pygame.mixer.music.play()
-click = pygame.mixer.Sound('assets/sounds/click.mp3')
-select_ = pygame.mixer.Sound('assets/sounds/select.mp3')
-select_.set_volume(0.25)
-upgrade = pygame.mixer.Sound('assets/sounds/upgrade.mp3')
-money_click = pygame.mixer.Sound('assets/sounds/money_click.mp3')
-downgrade = pygame.mixer.Sound('assets/sounds/downgrade.mp3')
-success = pygame.mixer.Sound('assets/sounds/success.mp3')
-swoosh = pygame.mixer.Sound('assets/sounds/swoosh.mp3')
-swoosh_back = pygame.mixer.Sound('assets/sounds/swoosh2.mp3')
+last_money_tick = pygame.time.get_ticks()
+ship_frenzy_tick = pygame.time.get_ticks()
+try:
+    pygame.mixer.music.load('assets/bg_msc.mp3')
+    click = pygame.mixer.Sound('assets/sounds/click.mp3')
+    select_ = pygame.mixer.Sound('assets/sounds/select.mp3')
+    select_.set_volume(0.25)
+    upgrade = pygame.mixer.Sound('assets/sounds/upgrade.mp3')
+    money_click = pygame.mixer.Sound('assets/sounds/money_click.mp3')
+    downgrade = pygame.mixer.Sound('assets/sounds/downgrade.mp3')
+    success = pygame.mixer.Sound('assets/sounds/success.mp3')
+    swoosh = pygame.mixer.Sound('assets/sounds/swoosh.mp3')
+    swoosh_back = pygame.mixer.Sound('assets/sounds/swoosh2.mp3')
+except Exception as e:
+    print(f"Audio load error: {e}")
 empty_sound = pygame.mixer.Sound(buffer=bytearray([0]*44100))
+if 'click' not in dir():
+    click = empty_sound
+    select_ = empty_sound
+    upgrade = empty_sound
+    money_click = empty_sound
+    downgrade = empty_sound
+    success = empty_sound
+    swoosh = empty_sound
+    swoosh_back = empty_sound
 WIDTH, HEIGHT = 1200, 750
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Coastline Clicker BETA")
@@ -850,7 +861,11 @@ async def main():
                     current_screen = MENU
             elif current_screen == COUNTRY:
                 if select.handle_event(event):
-                    select_.play()
+                    try:
+                        select_.play()
+                        pygame.mixer.music.play(-1)
+                    except:
+                        pass
                     current_screen = GAME
                     flag.image = current_flag
                     flag_panel.image = pygame.transform.scale(current_flag, (250, 175))
