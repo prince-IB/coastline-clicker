@@ -14,4 +14,4 @@ echo ""
 echo "Press Ctrl+C to stop the server"
 echo ""
 
-pygbag --ume_block 0 main.py
+pygbag --ume_block 0 --bind 0.0.0.0 main.py
