@@ -1,0 +1,15 @@
+Index: .gitignore
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>/lib/\n/bin/\n/build/\n/include/\n/.idea/coastline-clicker.iml\n/.idea/modules.xml\n/.idea/vcs.xml\n/.idea/workspace.xml\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.gitignore b/.gitignore
+--- a/.gitignore	(revision 09a889b4487ade65d63dd23fee469f2df4058540)
++++ b/.gitignore	(date 1768163786078)
+@@ -6,3 +6,4 @@
+ /.idea/modules.xml
+ /.idea/vcs.xml
+ /.idea/workspace.xml
++/.idea/git_toolbox_prj.xml
