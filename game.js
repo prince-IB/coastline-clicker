@@ -87,7 +87,7 @@ loadSound("upgrade", "assets/sounds/upgrade.wav");
 loadSound("money_click", "assets/sounds/money_click.wav");
 loadSound("downgrade", "assets/sounds/downgrade.wav");
 loadSound("success", "assets/sounds/success.wav");
-loadSound("bgm", "assets/Game_BG_Music.wav");
+loadSound("bgm", "assets/bg_msc.mp3");
 
 // Helper function to create a button
 function createButton(txt, x, y, w, h, textSize = 24, bgColor = [255, 255, 255]) {
