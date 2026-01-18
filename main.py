@@ -6,39 +6,21 @@ import time
 import os
 import webbrowser
 import platform
+import json, zlib
+from cryptography.fernet import Fernet
+import pyperclip
+KEY = b'eJ9Ece-sJAwmHBmw-D7ubTVt6jX_UVmmTSn7BX2xkQk='
+fernet = Fernet(KEY)
 try:
     seed = int.from_bytes(os.urandom(8), 'big')
-except:
+except BytesWarning as e:
     seed = int(time.time())
-random.seed(seed)
-pygame.mixer.pre_init(44100, -16, 2, 1024)
-pygame.init()
-pygame.mixer.init()
 last_money_tick = pygame.time.get_ticks()
 ship_frenzy_tick = pygame.time.get_ticks()
-try:
-    pygame.mixer.music.load('assets/bg_msc.mp3')
-    click = pygame.mixer.Sound('assets/sounds/click.mp3')
-    select_ = pygame.mixer.Sound('assets/sounds/select.mp3')
-    select_.set_volume(0.25)
-    upgrade = pygame.mixer.Sound('assets/sounds/upgrade.mp3')
-    money_click = pygame.mixer.Sound('assets/sounds/money_click.mp3')
-    downgrade = pygame.mixer.Sound('assets/sounds/downgrade.mp3')
-    success = pygame.mixer.Sound('assets/sounds/success.mp3')
-    swoosh = pygame.mixer.Sound('assets/sounds/swoosh.mp3')
-    swoosh_back = pygame.mixer.Sound('assets/sounds/swoosh2.mp3')
-except Exception as e:
-    print(f"Audio load error: {e}")
-empty_sound = pygame.mixer.Sound(buffer=bytearray([0]*44100))
-if 'click' not in dir():
-    click = empty_sound
-    select_ = empty_sound
-    upgrade = empty_sound
-    money_click = empty_sound
-    downgrade = empty_sound
-    success = empty_sound
-    swoosh = empty_sound
-    swoosh_back = empty_sound
+random.seed(seed)
+pygame.init()
+pygame.mixer.pre_init(44100, -16, 2, 2048)
+pygame.mixer.init()
 WIDTH, HEIGHT = 1200, 750
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Coastline Clicker BETA")
@@ -57,6 +39,7 @@ reducer = 1.0
 reducer_end_time = 0
 achievement_popups = []
 achievement_queue = []
+met_achievements = []
 current_popup = None
 expedition = {
     'soldiers':[],
@@ -100,13 +83,192 @@ missing_ss = []
 missing_tt = []
 missing_pp = []
 floating_texts2 = []
+banner = None
+show_banner = False
+go_to_flag = True
+def bannerbegone():
+    global banner, show_banner
+    banner = None
+    show_banner = False
+def update_all_buttons():
+    global money, money_per_second, tick_speed, coast_mi, country_name
+    global upgrade_money_price, upgrade_money_per_second_price, upgrade_tick_speed_price
+    global per_tick_efficiency_upgrade, critical_clicks_price, soldier_price
+    global tank_price, plane_price, heal_price, logistic_enhancement_price
+    global chance_of_success, ascend_miles, money_per_click, critical_clicks_chance
+    if money_per_click >= 10:
+        upgrade1.text = ['Upgrade Money Per Click', 'MAX LEVEL']
+    else:
+        upgrade1.text = ['Upgrade Money Per Click', f'(Price = ${upgrade_money_price})']
+
+    upgrade2.text = ['Upgrade Money Per Tick', f'(Price = ${upgrade_money_per_second_price})']
+
+    if tick_speed <= 50:
+        upgrade3.text = [' Reduce Tick Speed ', 'MAX LEVEL']
+    else:
+        upgrade3.text = [' Reduce Tick Speed ', f'(Price = ${upgrade_tick_speed_price})']
+    if pygame.time.get_ticks() < multiplier_end_time:
+        upgrade4.text = ['Multiply Money Per Tick', '(ACTIVE - 30s)']
+    else:
+        upgrade4.text = ['Multiply Money Per Tick', f'(30 seconds | Price = ${per_tick_efficiency_upgrade})']
+
+    if critical_clicks_chance <= 10:
+        upgrade5.text = ['Upgrade CritClick Chance', 'MAX LEVEL']
+    else:
+        upgrade5.text = ['Upgrade CritClick Chance', f'(Price = ${critical_clicks_price})']
+    upgrade6.text = ['Hire Infantry Soldier', f'(Price = ${soldier_price:.0f})']
+    upgrade7.text = ['Purchase Infantry Tank', f'(Price = ${tank_price:.0f})']
+    upgrade8.text = ['Purchase Fighter Jet', f'(Price = ${plane_price:.0f})']
+    upgrade9.text = ['Heal Military Units', f'(Price = ${heal_price:.0f})']
+    if pygame.time.get_ticks() < reducer_end_time:
+        upgrade10.text = ['Enhance Logistics', '(ACTIVE - 30s)']
+    else:
+        upgrade10.text = ['Enhance Logistics', f'30 Seconds | (Price = ${logistic_enhancement_price:.0f})']
+    money_knowing.text = [f'You have ${money:.0f}', f'Money Per Tick: ${money_per_second}']
+    coast_knowing.text = f'Coastline: {coast_mi}mi'
+    tick_speed_knowing.text = f'Tick speed = {tick_speed}ms'
+    name_of_country.text = f'Country: {country_name}'
+    ascend_button.text = ['ASCEND', f'{ascend_miles}mi Coastline Required']
+    send_expedition.text = ['Send Expedition!', f'Chance of Success: {chance_of_success}%']
+def handle_instant_import():
+    global banner, show_banner
+    encoded_str = pyperclip.paste()
+    if not encoded_str:
+        banner = Button(pygame.Rect(365, 250, 500, 200), text=['Import Failed', 'Please ensure that you have your save file','code copied to your clipboard (Ctrl + C).', '(ERROR CODE 2: EMPTY CLIPBOARD)'], border_width=3, border_radius=0, border_color=(0,0,0))
+        show_banner = True
+        return
+    try:
+        import_save(encoded_str)
+    except Exception as e:
+        banner = Button(pygame.Rect(365, 250, 500, 200),text=['Import Failed', 'Please ensure that you have your save file','code copied to your clipboard (Ctrl + C).', '[ERROR CODE 1: INVALID CODE]'], border_width=3, border_radius=0, border_color=(0,0,0))
+        show_banner = True
+        print(f"Error: {e}")
+def main_menu():
+    global current_screen, go_to_flag
+    current_screen = MENU
+    go_to_flag = False
+def settings():
+    global SETTINGS
+    SETTINGS = True
+def get_save_data():
+    return {
+        "money": money,
+        "army_level": army_level,
+        "coast_mi": coast_mi,
+        "coast_percent": coast_percent,
+        "step_sheets": step_sheets,
+        "clicks": clicks,
+        "money_per_click": money_per_click,
+        "upgrade_money_price": upgrade_money_price,
+        "tick_speed": tick_speed,
+        "x": x,
+        "ascend_miles": ascend_miles,
+        "base_money_per_second": base_money_per_second,
+        "money_per_second": money_per_second,
+        "upgrade_money_per_second_price": upgrade_money_per_second_price,
+        "upgrade_tick_speed_price": upgrade_tick_speed_price,
+        "per_tick_efficiency_upgrade": per_tick_efficiency_upgrade,
+        "multiplier_end_time": multiplier_end_time,
+        "original_money_per_second": original_money_per_second,
+        "soldiers": soldiers,
+        "soldier_price": soldier_price,
+        "tanks": tanks,
+        "tanks_price": tank_price,
+        "planes": planes,
+        "plane_price": plane_price,
+        "expedition_power": expedition_power,
+        "chance_of_success": chance_of_success,
+        "ship_spawn_rate": ship_spawn_rate,
+        "spawn_end_time": spawn_end_time,
+        "critical_clicks_price": critical_clicks_price,
+        "critical_clicks_chance": critical_clicks_chance,
+        "logistic_enhancement_price": logistic_enhancement_price,
+        "heal_price": heal_price,
+        "i" : i,
+        'country_name' : country_name,
+        'achievements' : met_achievements
+    }
+def export_save():
+    global banner,show_banner, SETTINGS
+    data = get_save_data()
+    json_bytes = json.dumps(data).encode()
+    compressed = zlib.compress(json_bytes)
+    encrypted = fernet.encrypt(compressed)
+    encoded = encrypted.decode()
+    pyperclip.copy(encoded)
+    banner = Button(pygame.Rect(365, 250, 500, 200),text=['Export Success!', 'Save file code copied to clipboard','(Ctrl + V). Make sure to always save!'], border_width=3,border_radius=0, border_color=(0, 0, 0))
+    show_banner = True
+    SETTINGS = False
+    return encoded
+def import_save(encoded_str):
+    global banner
+    global show_banner
+    global SETTINGS
+    global go_to_flag
+    compressed = fernet.decrypt(encoded_str.encode() if isinstance(encoded_str, str) else encoded_str)
+    json_bytes = zlib.decompress(compressed)
+    data = json.loads(json_bytes)
+    banner = Button(pygame.Rect(365, 250, 500, 200), text=['Import Success!','Your save file has been successfully', 'imported. Make sure to always save!'], border_width=3,border_radius=0, border_color=(0, 0, 0))
+    show_banner = True
+    SETTINGS = False
+    go_to_flag = False
+    load_save_data(data)
+def load_save_data(data):
+    global money, army_level, coast_mi, coast_percent, step_sheets, clicks
+    global money_per_click, upgrade_money_price, tick_speed, x, ascend_miles
+    global base_money_per_second, money_per_second, met_achievements
+    global upgrade_money_per_second_price, upgrade_tick_speed_price
+    global per_tick_efficiency_upgrade, multiplier_end_time, original_money_per_second
+    global soldiers, soldier_price, tanks, tank_price, planes, plane_price
+    global expedition_power, chance_of_success, ship_spawn_rate
+    global spawn_end_time, critical_clicks_price, critical_clicks_chance
+    global logistic_enhancement_price, heal_price, current_flag, flag_panel, i, country_name
+
+    money = data["money"]
+    army_level = data["army_level"]
+    coast_mi = data["coast_mi"]
+    coast_percent = data["coast_percent"]
+    step_sheets = data["step_sheets"]
+    clicks = data["clicks"]
+    money_per_click = data["money_per_click"]
+    upgrade_money_price = data["upgrade_money_price"]
+    tick_speed = data["tick_speed"]
+    x = data["x"]
+    ascend_miles = data["ascend_miles"]
+    base_money_per_second = data["base_money_per_second"]
+    money_per_second = data["money_per_second"]
+    upgrade_money_per_second_price = data["upgrade_money_per_second_price"]
+    upgrade_tick_speed_price = data["upgrade_tick_speed_price"]
+    per_tick_efficiency_upgrade = data["per_tick_efficiency_upgrade"]
+    multiplier_end_time = data["multiplier_end_time"]
+    original_money_per_second = data["original_money_per_second"]
+    soldiers = data["soldiers"]
+    soldier_price = data["soldier_price"]
+    tanks = data["tanks"]
+    tank_price = data["tanks_price"]
+    planes = data["planes"]
+    plane_price = data["plane_price"]
+    expedition_power = data["expedition_power"]
+    chance_of_success = data["chance_of_success"]
+    ship_spawn_rate = data["ship_spawn_rate"]
+    spawn_end_time = data["spawn_end_time"]
+    critical_clicks_price = data["critical_clicks_price"]
+    critical_clicks_chance = data["critical_clicks_chance"]
+    logistic_enhancement_price = data["logistic_enhancement_price"]
+    heal_price = data["heal_price"]
+    i = data['i']
+    country_name = data['country_name']
+    met_achievements = data['achievements']
+    flag_panel.image = flags[i]
+    flag_panel.image = pygame.transform.scale(flag_panel.image, (250, 175))
+    update_all_buttons()
 def enhance_logistics():
     global logistic_enhancement_price
     global money
     global enhancement_active
     global reducer, reducer_end_time
     global soldier_price, tank_price, plane_price
-    if money < logistic_enhancement_price:
+    if money < logistic_enhancement_price or enhancement_active:
         return
     upgrade.play()
     reducer = 0.5
@@ -406,7 +568,7 @@ def random_event():
     action4 = '-$500'
     action5 = 'Money Divided'
     action6 = 'Ship Frenzy!'
-    actions = [action1,action1,action1,action2,action3,action4,action4,action5]
+    actions = [action1,action1,action1,action1,action1,action3,action4,action4,action4,action4,action5]
     action = random.choice(actions)
     if action == action1:
         upgrade.play()
@@ -415,19 +577,18 @@ def random_event():
     elif action == action2:
         upgrade.play()
         downgrade.play()
-        url1 = 'https://www.youtube.com/shorts/LlFX_L8Xnu0'
-        url2 = 'https://www.youtube.com/shorts/9lrO00uUADE'
-        url3 = 'https://www.youtube.com/shorts/7K_BaMYbTX0'
-        url4 = 'https://www.youtube.com/shorts/EvJPWyKiVfU'
-        urls = [url1,url2,url3,url4]
+        urls = [
+            'https://www.youtube.com/shorts/LlFX_L8Xnu0',
+            'https://www.youtube.com/shorts/9lrO00uUADE',
+            'https://www.youtube.com/shorts/7K_BaMYbTX0',
+            'https://www.youtube.com/shorts/EvJPWyKiVfU'
+        ]
         url = random.choice(urls)
         if platform.system() == 'emscripten':
-            try:
-                import js
-                js.window.open(url, '_blank')
-            except ImportError:
-                webbrowser.open(url)
+            import js
+            js.window.open(url, '_blank')
         else:
+            import webbrowser
             webbrowser.open(url)
     elif action == action3:
         upgrade.play()
@@ -502,6 +663,8 @@ def upgrade_money_per_second():
         upgrade2.text = ['Upgrade Money Per Tick',f'(Price = ${upgrade_money_per_second_price:.0f})']
 def get_font_for_button(button_):
     if isinstance(button_.text, list):
+        if button_ == import_button:
+            return font2, font2
         total_length = sum(len(line) for line in button_.text)
         length1 = len(button_.text[0])
         length2 = len(button_.text[1])
@@ -520,6 +683,8 @@ def get_font_for_button(button_):
         elif length1 == length2 or (length1 + 1) == length2:
             return font3, font3
     elif isinstance(button_.text, str):
+        if button_.text == f'Tick speed = {tick_speed}ms':
+            return font7
         length = len(button_.text)
         if length >= 25:
             return font5
@@ -540,6 +705,9 @@ def check_ascend(button_):
 def check_money(button_, checker):
     global critical_clicks_price
     global upgrade_tick_speed_price
+    global enhancement_active
+    if button_.action == enhance_logistics and enhancement_active:
+        return
     if button_.action == heal_units and money < heal_price or (len(planes) <= 0 and len(tanks) <= 0 and len(soldiers) <= 0) or (all(soldier.hp == 50 for soldier in soldiers) and all(plane.hp == 850 for plane in planes) and all(tank.hp == 250 for tank in tanks)):
         upgrade9.color = (200,200,200)
         upgrade9.pressed_text_color = (0,0,0)
@@ -643,7 +811,9 @@ def change_flag_down():
         more.text_color = (0,255,0)
         click.play()
     current_flag = flags[i]
-
+def do():
+    global SETTINGS
+    SETTINGS = False
 with open('assets/country_names/country_names.txt', 'r') as names:
     name = names.read().splitlines()
 CREDITS = 'credits'
@@ -652,12 +822,13 @@ GAME = 'game'
 COUNTRY = 'country'
 UPGRADE1 = 'upgrade1'
 UPGRADE2 = 'upgrade2'
+SETTINGS = False
 current_screen = MENU
 current_upgrade_screen = UPGRADE1
 country_name = str(random.choice(name))
 
 #variables
-money = 100000
+money = 0
 army_level = 1
 coast_mi = 0.00
 coast_percent = 0.00
@@ -673,8 +844,6 @@ money_per_second = 0
 upgrade_money_per_second_price = 150
 upgrade_tick_speed_price = 300
 per_tick_efficiency_upgrade = 1000
-multiplier_active = False
-shipping = False
 multiplier_end_time = 0
 original_money_per_second = 0
 soldiers = []
@@ -689,66 +858,81 @@ ship_spawn_rate = 4321
 spawn_end_time = 20_000
 critical_clicks_price = 800
 critical_clicks_chance = 100
+logistic_enhancement_price = 3000
 heal_price = 1750
 moving = False
 available_to_buy = True
-logistic_enhancement_price = 3000
 enhancement_active = False
+multiplier_active = False
+shipping = False
 
+#load sounds
+click = pygame.mixer.Sound('assets/sounds/click.ogg')
+select_ = pygame.mixer.Sound('assets/sounds/select.ogg')
+upgrade = pygame.mixer.Sound('assets/sounds/upgrade.ogg')
+money_click = pygame.mixer.Sound('assets/sounds/money_click.ogg')
+downgrade = pygame.mixer.Sound('assets/sounds/downgrade.ogg')
+success = pygame.mixer.Sound('assets/sounds/success.ogg')
+swoosh = pygame.mixer.Sound('assets/sounds/swoosh.ogg')
+swoosh_back = pygame.mixer.Sound('assets/sounds/swoosh2.ogg')
+pygame.mixer.set_num_channels(8)
 #load images
+
+settings_ = pygame.image.load('assets/button_images/settings_icon.png').convert_alpha()
+settings_ = pygame.transform.scale(settings_, (40,40))
 menu_bg = pygame.image.load("assets/Menu.png").convert()
 menu_bg = pygame.transform.scale(menu_bg, (WIDTH, HEIGHT))
 game_bg = pygame.image.load("assets/Game.png").convert()
 game_bg = pygame.transform.scale(game_bg, (WIDTH, HEIGHT))
 credits_bg = pygame.image.load('assets/credits.png').convert()
 credits_bg = pygame.transform.scale(credits_bg, (WIDTH, HEIGHT))
-money_buttoN = pygame.image.load('assets/button_images/Money.png')
+money_buttoN = pygame.image.load('assets/button_images/Money.png').convert()
 money_buttoN = pygame.transform.scale(money_buttoN, (350, 350))
-money_buttoN_pressed = pygame.image.load('assets/button_images/Money_pressed.png')
+money_buttoN_pressed = pygame.image.load('assets/button_images/Money_pressed.png').convert()
 money_buttoN_pressed = pygame.transform.scale(money_buttoN_pressed, (350, 350))
-flag1 = pygame.image.load('assets/flags/flag1.png')
+flag1 = pygame.image.load('assets/flags/flag1.png').convert_alpha()
 flag1 = pygame.transform.scale(flag1, (500, 350))
-flag2 = pygame.image.load('assets/flags/flag2.png')
+flag2 = pygame.image.load('assets/flags/flag2.png').convert_alpha()
 flag2 = pygame.transform.scale(flag2, (500, 350))
-flag3 = pygame.image.load('assets/flags/flag3.png')
+flag3 = pygame.image.load('assets/flags/flag3.png').convert_alpha()
 flag3 = pygame.transform.scale(flag3, (500, 350))
-flag5 = pygame.image.load('assets/flags/flag5.png')
+flag5 = pygame.image.load('assets/flags/flag5.png').convert_alpha()
 flag5 = pygame.transform.scale(flag5, (500, 350))
-flag6 = pygame.image.load('assets/flags/flag6.png')
+flag6 = pygame.image.load('assets/flags/flag6.png').convert_alpha()
 flag6 = pygame.transform.scale(flag6, (500, 350))
-flag7 = pygame.image.load('assets/flags/flag7.png')
+flag7 = pygame.image.load('assets/flags/flag7.png').convert_alpha()
 flag7 = pygame.transform.scale(flag7, (500, 350))
-flag8 = pygame.image.load('assets/flags/flag8.png')
+flag8 = pygame.image.load('assets/flags/flag8.png').convert_alpha()
 flag8 = pygame.transform.scale(flag8, (500, 350))
-flag9 = pygame.image.load('assets/flags/flag9.png')
+flag9 = pygame.image.load('assets/flags/flag9.png').convert_alpha()
 flag9 = pygame.transform.scale(flag9, (500, 350))
-flag10 = pygame.image.load('assets/flags/flag10.png')
+flag10 = pygame.image.load('assets/flags/flag10.png').convert_alpha()
 flag10 = pygame.transform.scale(flag10, (500, 350))
-flag11 = pygame.image.load('assets/flags/flag11.png')
+flag11 = pygame.image.load('assets/flags/flag11.png').convert_alpha()
 flag11 = pygame.transform.scale(flag11, (500, 350))
-flag12 = pygame.image.load('assets/flags/flag12.png')
+flag12 = pygame.image.load('assets/flags/flag12.png').convert_alpha()
 flag12 = pygame.transform.scale(flag12, (500, 350))
-flag13 = pygame.image.load('assets/flags/flag13.png')
+flag13 = pygame.image.load('assets/flags/flag13.png').convert_alpha()
 flag13 = pygame.transform.scale(flag13, (500, 350))
-flag14 = pygame.image.load('assets/flags/flag14.png')
+flag14 = pygame.image.load('assets/flags/flag14.png').convert_alpha()
 flag14 = pygame.transform.scale(flag14, (500, 350))
-flag15 = pygame.image.load('assets/flags/flag15.png')
+flag15 = pygame.image.load('assets/flags/flag15.png').convert_alpha()
 flag15 = pygame.transform.scale(flag15, (500, 350))
-ship = pygame.image.load('assets/button_images/Ship.png')
+ship = pygame.image.load('assets/button_images/Ship.png').convert_alpha()
 ship = pygame.transform.scale(ship, (300, 200))
-wood = pygame.image.load('assets/button_images/wood.png')
+wood = pygame.image.load('assets/button_images/wood.png').convert()
 wood = pygame.transform.scale(wood, (330, 630))
-military_ = pygame.image.load('assets/button_images/Military.png')
+military_ = pygame.image.load('assets/button_images/Military.png').convert_alpha()
 military_ = pygame.transform.scale(military_, (400,280))
-soldier1_ = pygame.image.load('assets/button_images/soldier1.jpeg')
+soldier1_ = pygame.image.load('assets/button_images/soldier1.jpeg').convert_alpha()
 soldier1_ = pygame.transform.scale(soldier1_, (8,16))
-soldier2_ = pygame.image.load('assets/button_images/soldier2.jpg')
+soldier2_ = pygame.image.load('assets/button_images/soldier2.jpg').convert_alpha()
 soldier2_ = pygame.transform.scale(soldier2_, (8,16))
-tank_ = pygame.image.load('assets/button_images/tank.png')
+tank_ = pygame.image.load('assets/button_images/tank.png').convert_alpha()
 tank_ = pygame.transform.scale(tank_, (50,50))
-plane_ = pygame.image.load('assets/button_images/plane.png')
+plane_ = pygame.image.load('assets/button_images/plane.png').convert_alpha()
 plane_ = pygame.transform.scale(plane_, (80, 80))
-island_img = pygame.image.load('assets/button_images/island.png')
+island_img = pygame.image.load('assets/button_images/island.png').convert_alpha()
 island_img = pygame.transform.scale(island_img, (400, 450))
 flags = [flag1,flag2,flag3,flag5,flag6,flag7,flag8,flag9,flag10,flag11,flag12,flag13,flag14,flag15]
 current_flag = flags[0]
@@ -756,14 +940,12 @@ i = 0
 #buttons for menu and credits
 start_button = Button(pygame.Rect(0, 0, 200, 100), 'START', text_color=(0, 255, 0))
 start_button.rect.centerx = WIDTH // 2
-start_button.rect.centery = 500
-credits_button = Button(pygame.Rect(0, 0, 150, 80), 'CREDITS', text_color=(0,0,0))
-credits_button.rect.centerx = WIDTH // 2
-credits_button.rect.centery = 600
+start_button.rect.centery = 480
+credits_button = Button(pygame.Rect(600, 540, 150, 80), 'CREDITS', text_color=(0,0,0))
 X_button = Button(pygame.Rect(0,0,100,100), "X", text_color=(0,0,0))
 X_button.rect.centerx = WIDTH - 100
 X_button.rect.centery = HEIGHT - 650
-
+import_button = Button(pygame.Rect(440, 540, 150, 80), text=['IMPORT', 'SAVE'])
 
 #game buttons
 money_button = Button(pygame.Rect(10, 120, 350, 350), image=money_buttoN, pressed_image=money_buttoN_pressed, action = add_money, text='Click for money!', text_color=(255,255,255))
@@ -786,16 +968,17 @@ ascend_button = Button(pygame.Rect(890, 10, 300, 100), text=['ASCEND', f'{ascend
 black_line1 = Button(pygame.Rect(870, 120, 400, 5), color=(0,0,0))
 black_line2 = Button(pygame.Rect(870, 120, 5, 700), color = (0,0,0))
 tick_speed_knowing = Button(pygame.Rect(135, 80, 100, 20), text = f'Tick speed = {tick_speed}ms', text_color=(0,0,0), pressed_text_color=(0,0,0))
+settings_button = Button(pygame.Rect(6, 8, 40, 40), image=settings_, pressed_image=settings_, action=settings, border_width=3, border_color=(0,0,0), color=(255,255,255))
 send_expedition = Button(pygame.Rect(415, 640, 400, 100), text=['Send Expedition!', f'Chance of Success: {chance_of_success}%'], text_color=(0,0,0), action=send_an_expedition)
 coast_knowing = Button(pygame.Rect(415, 10, 400, 100), text=f'Coastline: {coast_mi}mi',text_color=(0,0,0), border_radius=0, pressed_text_color=(0,0,0))
 wood_ = Button(pygame.Rect(870,120,330,630), image=wood, pressed_image=wood)
 military = Button(pygame.Rect(415, 350, 400, 280), image=military_, pressed_image=military_, border_color=(0,0,0), border_width=3, border_radius=0)
 island_border = Button(pygame.Rect(415, 120, 400, 220), border_color=(0,0,0), border_width=3, border_radius=0, color=None)
 island = Button(pygame.Rect(415, 5, 400, 220), image=island_img, pressed_image=island_img, border_color=(0,0,0), border_width=0, border_radius=0)
-game_buttons = [money_button, money_knowing, name_of_country, ascend_button, black_line1, black_line2, the_thing, tick_speed_knowing, send_expedition, coast_knowing, military, island, island_border]
+game_buttons = [money_button, money_knowing, name_of_country, ascend_button, black_line1, black_line2, the_thing, tick_speed_knowing, send_expedition, coast_knowing, military, island, island_border, settings_button]
 upgrade_screen1_buttons = [upgrade1, upgrade2, upgrade3, upgrade4, upgrade5, down_arrow]
 upgrade_screen2_buttons = [up_arrow, upgrade6, upgrade7, upgrade8, upgrade9, upgrade10]
-ship_ = Button(pygame.Rect(0,0,300,200), image=ship, color=None, text='Click me!', text_color=(0,0,0), action=random_event)
+ship_ = Button(pygame.Rect(0,900,300,200), image=ship, color=None, text='Click me!', text_color=(0,0,0), action=random_event)
 
 #country buttons
 more = Button(pygame.Rect(925, 225, 100, 100), text=">", text_color=(0,255,0), action=change_flag_up, pressed_text_color=(200,200,200))
@@ -814,6 +997,15 @@ flag_panel = Button(pygame.Rect(60, 542, 275, 175))
 flag_panel.image = pygame.transform.scale(flag.image, (250, 175))
 flag_panel.pressed_image = pygame.transform.scale(flag.image, (250, 175))
 
+#settings screen buttons
+tar_and_feather = Button(pygame.Rect(-50,-50,1300,800), color=(0,0,0,150))
+export_button = Button(pygame.Rect(475, 250, 300, 100), text='Export Save', action=export_save)
+main_menu_button = Button(pygame.Rect(475, 360, 300, 100), text='Exit Game', action=main_menu)
+settings_text = Button(pygame.Rect(375, 150, 500, 100), text='Settings', text_color=(255,255,255), pressed_text_color=(255,255,255), color=None)
+x_button = Button(pygame.Rect(1110, 20, 70, 70), text='X',action=do)
+x_button3 = Button(pygame.Rect(815, 250, 50, 50), text="X", border_color=(0,0,0), border_radius=0, border_width=3)
+settings_buttons = [tar_and_feather, export_button, main_menu_button, settings_text, x_button]
+
 stats = {
     'clicks' : clicks,
     'money' : money,
@@ -822,29 +1014,39 @@ stats = {
     'planes' : len(expedition['planes']),
     'coast' : coast_mi
 }
+
 async def main():
+    bg_msc = pygame.mixer.Sound('assets/sounds/bg_msc.ogg')
+    music_playing = False
     global current_screen, current_upgrade_screen, current_flag, i, money, clicks
     global money_per_second, base_money_per_second, multiplier, multiplier_active, multiplier_end_time
     global money_per_click, upgrade_money_price, x, tick_speed, upgrade_tick_speed_price
     global upgrade_money_per_second_price, per_tick_efficiency_upgrade, critical_clicks_price, critical_clicks_chance
-    global soldier_price, tank_price, plane_price, expedition_power, chance_of_success
+    global soldier_price, tank_price, plane_price, expedition_power, chance_of_success, logistic_enhancement_price
     global shipping, moving, available_to_buy, last_money_tick, coast_mi, enhancement_active, reducer, reducer_end_time
+    global SETTINGS, running
     running = True
     while running:
         for event in pygame.event.get():
-            if event.type in (pygame.MOUSEBUTTONDOWN, pygame.FINGERDOWN):
-                if not pygame.mixer.music.get_busy():
-                    pass
-                else:
-                    pass
+            if not music_playing:
+                if any(pygame.mouse.get_pressed()) or any(pygame.key.get_pressed()):
+                    bg_msc.play(-1)
+                    music_playing = True
             if event.type == pygame.QUIT:
                 running = False
-
             if current_screen == MENU:
                 if start_button.handle_event(event):
-                    current_screen = COUNTRY
+                    select_.play()
+                    if go_to_flag:
+                        current_screen = COUNTRY
+                    else:
+                        current_screen = GAME
                 if credits_button.handle_event(event):
                     current_screen = CREDITS
+                if import_button.handle_event(event):
+                    handle_instant_import()
+                if x_button3.handle_event(event):
+                    bannerbegone()
             elif current_screen == GAME:
                 for button in game_buttons:
                     button.handle_event(event)
@@ -854,18 +1056,18 @@ async def main():
                 elif current_upgrade_screen == UPGRADE2:
                     for button in upgrade_screen2_buttons:
                         button.handle_event(event)
-                if ship_.handle_event(event):
-                    pass
+                if SETTINGS:
+                    for button in settings_buttons:
+                        button.handle_event(event)
+                if x_button3.handle_event(event):
+                    SETTINGS = False
+                    bannerbegone()
             elif current_screen == CREDITS:
                 if X_button.handle_event(event):
                     current_screen = MENU
             elif current_screen == COUNTRY:
                 if select.handle_event(event):
-                    try:
-                        select_.play()
-                        pygame.mixer.music.play(-1)
-                    except:
-                        pass
+                    select_.play()
                     current_screen = GAME
                     flag.image = current_flag
                     flag_panel.image = pygame.transform.scale(current_flag, (250, 175))
@@ -873,12 +1075,18 @@ async def main():
                 for button in country_buttons:
                     button.handle_event(event)
         if current_screen == MENU:
+            SETTINGS = False
             screen.blit(menu_bg, (0,0))
             start_button.draw(screen, font)
-            credits_button.draw(screen, font2)
+            import_button.draw(screen, get_font_for_button(import_button))
+            credits_button.draw(screen, get_font_for_button(credits_button))
+            if show_banner and banner is not None:
+                tar_and_feather.draw(screen,font)
+                banner.draw(screen, get_font_for_button(banner))
+                x_button3.draw(screen, font2)
         elif current_screen == GAME:
             screen.blit(game_bg, (0,0))
-            wood_.draw(screen, font)
+            wood_.draw(screen, get_font_for_button(wood_))
             stats['clicks'] = clicks
             stats['money'] = money
             stats['soldiers'] = len(expedition['soldiers']) or len(soldiers)
@@ -886,9 +1094,10 @@ async def main():
             stats['planes'] = len(expedition['planes']) or len(planes)
             stats['coast'] = coast_mi
             for achievement in achievements.values():
-                if not achievement.met and achievement.check(stats[achievement.stat]):
+                if not achievement.met and achievement.check(stats[achievement.stat]) and achievement.name not in met_achievements:
                     achievement.met = True
                     achievement_queue.append(achievement)
+                    met_achievements.append(achievement.name)
                     achievement.triggered_time = pygame.time.get_ticks()
             global current_popup
             if current_popup is None and len(achievement_queue) > 0:
@@ -1004,10 +1213,10 @@ async def main():
             elif enhancement_active and now < reducer_end_time:
                 upgrade10.color = (200,200,200)
                 upgrade10.pressed_text_color = (0,0,0)
-            white.draw(screen, font)
+            white.draw(screen, get_font_for_button(white))
             for button in game_buttons:
                 if button == tick_speed_knowing:
-                    button.draw(screen, font5)
+                    button.draw(screen, get_font_for_button(button))
                 else:
                     button.draw(screen, get_font_for_button(button))
             for ss in soldiers:
@@ -1047,7 +1256,7 @@ async def main():
             elif current_upgrade_screen == UPGRADE2:
                 for button in upgrade_screen2_buttons:
                     button.draw(screen, get_font_for_button(button))
-            flag_panel.draw(screen, font)
+            flag_panel.draw(screen, get_font_for_button(flag_panel))
             for ss, _, _ in expedition["soldiers"]:
                 if ss.visible and ss.rect.y < 590:
                     ss.draw(screen, font)
@@ -1081,16 +1290,18 @@ async def main():
                     swoosh_back.play()
                     current_popup = None
             if shipping is False:
+                global ship_spawn_rate
                 if random.randint(1, ship_spawn_rate) == 1:
-                    ship_.rect.y = random.randint(500, 600)
+                    ship_.rect.y = random.randint(450, 580)
                     ship_.rect.x = -100
                     ship_.rect.width = 300
                     ship_.rect.height = 200
+                    ship_spawn_rate = 4321
                     shipping = True
             if shipping is True:
                 move(ship_)
                 if ship_.rect.x > 10:
-                    ship_.draw(screen, font6)
+                    ship_.draw(screen, get_font_for_button(ship_))
                 if pygame.mouse.get_pressed()[0]:
                     mouse_pos = pygame.mouse.get_pos()
                     if ship_.rect.collidepoint(mouse_pos):
@@ -1102,15 +1313,22 @@ async def main():
                     shipping = False
                     ship_.rect.width = 0
                     ship_.rect.height = 0
+            if SETTINGS:
+                for button in settings_buttons:
+                    button.draw(screen, get_font_for_button(button))
+            if show_banner and banner is not None:
+                tar_and_feather.draw(screen,font)
+                banner.draw(screen, get_font_for_button(banner))
+                x_button3.draw(screen, font2)
         elif current_screen == CREDITS:
             screen.blit(credits_bg, (0,0))
-            X_button.draw(screen, font)
+            X_button.draw(screen, font4)
         elif current_screen == COUNTRY:
             screen.blit(game_bg, (0,0))
             select.draw(screen, font)
             choose.draw(screen, font3)
             flag.image = current_flag
-            flag.draw(screen, font6)
+            flag.draw(screen, get_font_for_button(flag))
             for button in country_buttons:
                 button.draw(screen, font4)
         pygame.display.flip()
@@ -1118,5 +1336,3 @@ async def main():
         await asyncio.sleep(0)
     pygame.quit()
 asyncio.run(main())
-
-#stinking butthole fart peepee smelly doodoo diarrhea toilet poopoo garbage trash rubbish tinkle gut butt-smelling booty-face durr durr keeps black-screening

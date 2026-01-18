@@ -113,48 +113,60 @@ class Button:
 
         return False
 
-    def draw(self, screen, font=None):
+    def draw(self, screen, font):
+        # 1. Draw Background (Image or Color)
         if self.image:
             img = self.pressed_image if self.pressed and self.pressed_image else self.image
             screen.blit(img, self.rect)
         elif self.color is not None:
-            pygame.draw.rect(screen, self.color, self.rect, border_radius=self.border_radius)
+            button_surface = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
+            fill_color = (*self.color, 255) if len(self.color) == 3 else self.color
+            pygame.draw.rect(button_surface, fill_color, button_surface.get_rect(), border_radius=self.border_radius)
+            screen.blit(button_surface, self.rect.topleft)
 
-        # Draw the border if border_color is set
+        # 2. Draw Border
         if self.border_color and self.border_width > 0:
-            pygame.draw.rect(screen, self.border_color, self.rect, width=self.border_width,
-                             border_radius=self.border_radius)
+            border_surface = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
+            pygame.draw.rect(border_surface, (*self.border_color, 255), border_surface.get_rect(),
+                             width=self.border_width, border_radius=self.border_radius)
+            screen.blit(border_surface, self.rect.topleft)
 
+        # 3. Draw Multi-line Text
         if not self.text or not font:
             return
 
         color = self.pressed_text_color if self.pressed else self.text_color
 
-        if isinstance(self.text, list) and isinstance(font, tuple):
-            font_top, font_bottom = font
-            surf_top = font_top.render(self.text[0], False, color)
-            surf_bottom = font_bottom.render(self.text[1], False, color)
-            spacing = 4
-            total_height = surf_top.get_height() + spacing + surf_bottom.get_height()
-            start_y = self.rect.centery - total_height // 2
-            rect_top = surf_top.get_rect(centerx=self.rect.centerx, y=start_y)
-            rect_bottom = surf_bottom.get_rect(
-                centerx=self.rect.centerx,
-                y=start_y + surf_top.get_height() + spacing
-            )
-            screen.blit(surf_top, rect_top)
-            screen.blit(surf_bottom, rect_bottom)
-        elif isinstance(self.text, list):
-            line_height = font.get_height()
-            total_height = line_height * len(self.text)
-            start_y = self.rect.centery - total_height // 2
-            for i, line in enumerate(self.text):
-                surf = font.render(line, False, color)
-                rect = surf.get_rect(
-                    centerx=self.rect.centerx,
-                    y=start_y + i * line_height
-                )
-                screen.blit(surf, rect)
+        # Convert text to a list of strings (handles \n)
+        if isinstance(self.text, str):
+            lines = self.text.split('\n')
         else:
-            surf = font.render(self.text, False, color)
-            screen.blit(surf, surf.get_rect(center=self.rect.center))
+            lines = self.text
+
+        rendered_lines = []
+
+        # Logic for multiple fonts (e.g., Header font and Subtitle font)
+        if isinstance(font, (tuple, list)) and len(lines) >= 2:
+            # Render first line with font[0], second with font[1]
+            rendered_lines.append(font[0].render(str(lines[0]), True, color))
+            rendered_lines.append(font[1].render(str(lines[1]), True, color))
+            # If there are more lines but only 2 fonts, use the second font for the rest
+            for extra_line in lines[2:]:
+                rendered_lines.append(font[1].render(str(extra_line), True, color))
+        else:
+            # Standard case: Use the same font for every line
+            # This handles if 'font' is just a single pygame.font.Font object
+            current_font = font[0] if isinstance(font, (tuple, list)) else font
+            rendered_lines = [current_font.render(str(line), True, color) for line in lines]
+
+        # Calculate total height of all lines combined for vertical centering
+        spacing = 4
+        total_height = sum(surf.get_height() for surf in rendered_lines) + (spacing * (len(rendered_lines) - 1))
+
+        # Start drawing from this Y coordinate to keep the block centered
+        current_y = self.rect.centery - (total_height // 2)
+
+        for surf in rendered_lines:
+            line_rect = surf.get_rect(centerx=self.rect.centerx, top=current_y)
+            screen.blit(surf, line_rect)
+            current_y += surf.get_height() + spacing
