@@ -1,5 +1,4 @@
 import pygame
-
 class AchievementPopup:
     def __init__(self, name, name2, width, height, font, small_font, smaller_font):
         self.name = name

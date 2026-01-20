@@ -4,13 +4,18 @@ from game import Button, Achievement, AchievementPopup
 import random
 import time
 import os
-import webbrowser
 import platform
-import json, zlib
-from cryptography.fernet import Fernet
-import pyperclip
-KEY = b'eJ9Ece-sJAwmHBmw-D7ubTVt6jX_UVmmTSn7BX2xkQk='
-fernet = Fernet(KEY)
+import json
+import zlib
+import base64
+import webbrowser
+import urllib.parse
+print('Imports completed')
+IS_WEB = platform.system() == 'Emscripten'
+KEY = '**3cOasTline1_4CliCkEr2_iS_tHe_BeSt^'
+def xor_cipher(data_bytes):
+    key_bytes = KEY.encode()
+    return bytes([b ^ key_bytes[i % len(key_bytes)] for i, b in enumerate(data_bytes)])
 try:
     seed = int.from_bytes(os.urandom(8), 'big')
 except BytesWarning as e:
@@ -19,20 +24,11 @@ last_money_tick = pygame.time.get_ticks()
 ship_frenzy_tick = pygame.time.get_ticks()
 random.seed(seed)
 pygame.init()
-pygame.mixer.pre_init(44100, -16, 2, 2048)
+pygame.mixer.pre_init(44100, -16, 1, 1024)
 pygame.mixer.init()
 WIDTH, HEIGHT = 1200, 750
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Coastline Clicker BETA")
-FONT_PATH = 'assets/fonts/pixel_font.ttf'
-font = pygame.font.Font(FONT_PATH, 30)
-font2 = pygame.font.Font(FONT_PATH, 20)
-font3 = pygame.font.Font(FONT_PATH, 15)
-font4 = pygame.font.Font(FONT_PATH, 50)
-font5 = pygame.font.Font(FONT_PATH, 10)
-font6 = pygame.font.Font(FONT_PATH, 7)
-font7 = pygame.font.Font(FONT_PATH, 12)
-font8 = pygame.font.Font(FONT_PATH, 13)
 clock = pygame.time.Clock()
 multiplier = 1.0
 reducer = 1.0
@@ -86,6 +82,19 @@ floating_texts2 = []
 banner = None
 show_banner = False
 go_to_flag = True
+def get_font(name_,size):
+    try:
+        return pygame.font.Font(f'assets/fonts/{name_}.ttf', size)
+    except:
+        return pygame.font.SysFont("Arial", size)
+font = get_font('pixel_font', 30)
+font2 = get_font('pixel_font', 20)
+font3 = get_font('pixel_font', 15)
+font4 = get_font('pixel_font', 50)
+font5 = get_font('pixel_font', 10)
+font6 = get_font('pixel_font', 7)
+font7 = get_font('pixel_font', 12)
+font8 = get_font('pixel_font', 13)
 def bannerbegone():
     global banner, show_banner
     banner = None
@@ -131,18 +140,41 @@ def update_all_buttons():
     ascend_button.text = ['ASCEND', f'{ascend_miles}mi Coastline Required']
     send_expedition.text = ['Send Expedition!', f'Chance of Success: {chance_of_success}%']
 def handle_instant_import():
-    global banner, show_banner
-    encoded_str = pyperclip.paste()
-    if not encoded_str:
-        banner = Button(pygame.Rect(365, 250, 500, 200), text=['Import Failed', 'Please ensure that you have your save file','code copied to your clipboard (Ctrl + C).', '(ERROR CODE 2: EMPTY CLIPBOARD)'], border_width=3, border_radius=0, border_color=(0,0,0))
+    global banner, show_banner, SETTINGS, go_to_flag
+    encoded_str = None
+    if platform.system() == "Emscripten":
+        from platform import window
+        encoded_str = window.prompt("Paste your save file code below (Ctrl + V):")
+    else:
+        print("Import requested. Popups only work in the browser.")
+        return
+    if not encoded_str or encoded_str.strip() == "":
+        banner = Button(pygame.Rect(365, 250, 500, 200),
+                        text=['Import Failed', 'No code was entered.', '(ERROR CODE 2: EMPTY INPUT)'],
+                        border_width=3, border_radius=0, border_color=(0, 0, 0))
         show_banner = True
         return
     try:
-        import_save(encoded_str)
-    except Exception as e:
-        banner = Button(pygame.Rect(365, 250, 500, 200),text=['Import Failed', 'Please ensure that you have your save file','code copied to your clipboard (Ctrl + C).', '[ERROR CODE 1: INVALID CODE]'], border_width=3, border_radius=0, border_color=(0,0,0))
+        clean_input = encoded_str.strip()
+        encrypted = base64.b64decode(clean_input)
+        compressed = xor_cipher(encrypted)
+        json_bytes = zlib.decompress(compressed)
+        data = json.loads(json_bytes)
+        load_save_data(data)
+        banner = Button(pygame.Rect(365, 250, 500, 200),
+                        text=['Import Success!', 'Your save file has been successfully',
+                              'imported. Make sure to always save!'],
+                        border_width=3, border_radius=0, border_color=(0, 0, 0))
         show_banner = True
-        print(f"Error: {e}")
+        SETTINGS = False
+        go_to_flag = False
+    except Exception as e:
+        print(f"Import Error: {e}")
+        banner = Button(pygame.Rect(365, 250, 500, 200),
+                        text=['Import Failed', 'Invalid save code formatting.', 'Ensure you copied the full code.',
+                              '[ERROR CODE 1: INVALID CODE]'],
+                        border_width=3, border_radius=0, border_color=(0, 0, 0))
+        show_banner = True
 def main_menu():
     global current_screen, go_to_flag
     current_screen = MENU
@@ -193,26 +225,18 @@ def export_save():
     data = get_save_data()
     json_bytes = json.dumps(data).encode()
     compressed = zlib.compress(json_bytes)
-    encrypted = fernet.encrypt(compressed)
-    encoded = encrypted.decode()
-    pyperclip.copy(encoded)
-    banner = Button(pygame.Rect(365, 250, 500, 200),text=['Export Success!', 'Save file code copied to clipboard','(Ctrl + V). Make sure to always save!'], border_width=3,border_radius=0, border_color=(0, 0, 0))
+    encrypted = xor_cipher(compressed)
+    encoded = base64.b64encode(encrypted).decode()
+    if platform.system() == 'Emscripten':
+        from platform import window
+        window.prompt("This is your save code, copy it and keep it safe!:", encoded)
+    else:
+        import pyperclip
+        pyperclip.copy(encoded)
+    banner = Button(pygame.Rect(365, 250, 500, 200), text='Export Success!', border_width=3,             border_radius=0, border_color=(0, 0, 0))
     show_banner = True
     SETTINGS = False
     return encoded
-def import_save(encoded_str):
-    global banner
-    global show_banner
-    global SETTINGS
-    global go_to_flag
-    compressed = fernet.decrypt(encoded_str.encode() if isinstance(encoded_str, str) else encoded_str)
-    json_bytes = zlib.decompress(compressed)
-    data = json.loads(json_bytes)
-    banner = Button(pygame.Rect(365, 250, 500, 200), text=['Import Success!','Your save file has been successfully', 'imported. Make sure to always save!'], border_width=3,border_radius=0, border_color=(0, 0, 0))
-    show_banner = True
-    SETTINGS = False
-    go_to_flag = False
-    load_save_data(data)
 def load_save_data(data):
     global money, army_level, coast_mi, coast_percent, step_sheets, clicks
     global money_per_click, upgrade_money_price, tick_speed, x, ascend_miles
@@ -561,13 +585,12 @@ def random_event():
     global money_per_second
     global ship_
     global shipping
-    global spawning_fast
     action1 = '+$500'
     action2 = 'Ronaldo Edits (for Benji)!'
     action3 = 'Money Doubled!'
     action4 = '-$500'
     action5 = 'Money Divided'
-    action6 = 'Ship Frenzy!'
+    action6 = 'Your IP is:'
     actions = [action1,action1,action1,action1,action1,action3,action4,action4,action4,action4,action5]
     action = random.choice(actions)
     if action == action1:
@@ -604,15 +627,13 @@ def random_event():
         downgrade.play()
         money = money // 1.5
         money_knowing.text = [f'You have ${money:.0f}', f'Money Per Tick: ${money_per_second}']
-    elif action == action6:
-        upgrade.play()
-        spawning_fast = True
     ship_.rect.width = 0
     ship_.rect.height = 0
     shipping = False
-    x2 = ship_.rect.x + 125
-    y2 = ship_.rect.y + 100
-    floating_texts2.append({'x': x2, 'y': y2, 'text': f"{action}", 'timer': 30})
+    if action != action6:
+        x2 = ship_.rect.x + 125
+        y2 = ship_.rect.y + 100
+        floating_texts2.append({'x': x2, 'y': y2, 'text': f"{action}", 'timer': 30})
 def move(thing):
     thing.rect.x = thing.rect.x + 3
 def multiply_efficiency():
@@ -875,20 +896,20 @@ downgrade = pygame.mixer.Sound('assets/sounds/downgrade.ogg')
 success = pygame.mixer.Sound('assets/sounds/success.ogg')
 swoosh = pygame.mixer.Sound('assets/sounds/swoosh.ogg')
 swoosh_back = pygame.mixer.Sound('assets/sounds/swoosh2.ogg')
+bg_msc = pygame.mixer.Sound('assets/sounds/bg_msc.ogg')
 pygame.mixer.set_num_channels(8)
 #load images
-
 settings_ = pygame.image.load('assets/button_images/settings_icon.png').convert_alpha()
 settings_ = pygame.transform.scale(settings_, (40,40))
-menu_bg = pygame.image.load("assets/Menu.png").convert()
+menu_bg = pygame.image.load("assets/menu.png").convert()
 menu_bg = pygame.transform.scale(menu_bg, (WIDTH, HEIGHT))
-game_bg = pygame.image.load("assets/Game.png").convert()
+game_bg = pygame.image.load("assets/game.png").convert()
 game_bg = pygame.transform.scale(game_bg, (WIDTH, HEIGHT))
 credits_bg = pygame.image.load('assets/credits.png').convert()
 credits_bg = pygame.transform.scale(credits_bg, (WIDTH, HEIGHT))
-money_buttoN = pygame.image.load('assets/button_images/Money.png').convert()
+money_buttoN = pygame.image.load('assets/button_images/money.png').convert()
 money_buttoN = pygame.transform.scale(money_buttoN, (350, 350))
-money_buttoN_pressed = pygame.image.load('assets/button_images/Money_pressed.png').convert()
+money_buttoN_pressed = pygame.image.load('assets/button_images/money_pressed.png').convert()
 money_buttoN_pressed = pygame.transform.scale(money_buttoN_pressed, (350, 350))
 flag1 = pygame.image.load('assets/flags/flag1.png').convert_alpha()
 flag1 = pygame.transform.scale(flag1, (500, 350))
@@ -918,11 +939,11 @@ flag14 = pygame.image.load('assets/flags/flag14.png').convert_alpha()
 flag14 = pygame.transform.scale(flag14, (500, 350))
 flag15 = pygame.image.load('assets/flags/flag15.png').convert_alpha()
 flag15 = pygame.transform.scale(flag15, (500, 350))
-ship = pygame.image.load('assets/button_images/Ship.png').convert_alpha()
+ship = pygame.image.load('assets/button_images/ship.png').convert_alpha()
 ship = pygame.transform.scale(ship, (300, 200))
 wood = pygame.image.load('assets/button_images/wood.png').convert()
 wood = pygame.transform.scale(wood, (330, 630))
-military_ = pygame.image.load('assets/button_images/Military.png').convert_alpha()
+military_ = pygame.image.load('assets/button_images/military.png').convert_alpha()
 military_ = pygame.transform.scale(military_, (400,280))
 soldier1_ = pygame.image.load('assets/button_images/soldier1.jpeg').convert_alpha()
 soldier1_ = pygame.transform.scale(soldier1_, (8,16))
@@ -1014,29 +1035,31 @@ stats = {
     'planes' : len(expedition['planes']),
     'coast' : coast_mi
 }
-
 async def main():
-    bg_msc = pygame.mixer.Sound('assets/sounds/bg_msc.ogg')
-    music_playing = False
     global current_screen, current_upgrade_screen, current_flag, i, money, clicks
     global money_per_second, base_money_per_second, multiplier, multiplier_active, multiplier_end_time
     global money_per_click, upgrade_money_price, x, tick_speed, upgrade_tick_speed_price
     global upgrade_money_per_second_price, per_tick_efficiency_upgrade, critical_clicks_price, critical_clicks_chance
     global soldier_price, tank_price, plane_price, expedition_power, chance_of_success, logistic_enhancement_price
     global shipping, moving, available_to_buy, last_money_tick, coast_mi, enhancement_active, reducer, reducer_end_time
-    global SETTINGS, running
+    global SETTINGS
     running = True
     while running:
         for event in pygame.event.get():
-            if not music_playing:
-                if any(pygame.mouse.get_pressed()) or any(pygame.key.get_pressed()):
-                    bg_msc.play(-1)
-                    music_playing = True
             if event.type == pygame.QUIT:
                 running = False
+            if event.type == pygame.WINDOWFOCUSLOST:
+                pygame.mixer.pause()
+            if event.type == pygame.WINDOWFOCUSGAINED:
+                pygame.mixer.unpause()
             if current_screen == MENU:
                 if start_button.handle_event(event):
                     select_.play()
+                    try:
+                        bg_msc.set_volume(0.654321)
+                        bg_msc.play(-1)
+                    except Exception:
+                        print('Music Error')
                     if go_to_flag:
                         current_screen = COUNTRY
                     else:
@@ -1332,7 +1355,7 @@ async def main():
             for button in country_buttons:
                 button.draw(screen, font4)
         pygame.display.flip()
-        clock.tick(60)
-        await asyncio.sleep(0)
+        clock.tick(30)
+        await asyncio.sleep(0.001)
     pygame.quit()
 asyncio.run(main())
