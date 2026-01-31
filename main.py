@@ -8,11 +8,15 @@ import platform
 import json
 import zlib
 import base64
-import webbrowser
-import urllib.parse
+
+"""Inspired by Bosnia's 12-mile coastline"""
+"""No Offense to any Bosnians"""
+"""Game created by Izyk Bhanji"""
+
+
 print('Imports completed')
 IS_WEB = platform.system() == 'Emscripten'
-KEY = '**3cOasTline1_4CliCkEr2_iS_tHe_BeSt^'
+KEY = '#_%-C1o5A53s535tL435i543Ne_cLi43Kc345er_i543S_tH453e_b345ES345t!*&=='
 def xor_cipher(data_bytes):
     key_bytes = KEY.encode()
     return bytes([b ^ key_bytes[i % len(key_bytes)] for i, b in enumerate(data_bytes)])
@@ -112,7 +116,7 @@ def update_all_buttons():
 
     upgrade2.text = ['Upgrade Money Per Tick', f'(Price = ${upgrade_money_per_second_price})']
 
-    if tick_speed <= 50:
+    if tick_speed <= 10:
         upgrade3.text = [' Reduce Tick Speed ', 'MAX LEVEL']
     else:
         upgrade3.text = [' Reduce Tick Speed ', f'(Price = ${upgrade_tick_speed_price})']
@@ -228,8 +232,9 @@ def export_save():
     encrypted = xor_cipher(compressed)
     encoded = base64.b64encode(encrypted).decode()
     if platform.system() == 'Emscripten':
-        from platform import window
-        window.prompt("This is your save code, copy it and keep it safe!:", encoded)
+        pygame.mixer.pause()
+        platform.window.prompt("This is your save code, copy it and keep it safe!:", encoded)
+        pygame.mixer.unpause()
     else:
         import pyperclip
         pyperclip.copy(encoded)
@@ -352,7 +357,10 @@ def expedition_it():
     send_expedition.pressed_text_color = (0,0,0)
     if random.random() < (chance_of_success / 100):
         success.play()
-        coast_mi = round((coast_mi + (expedition_power / 70) * (army_level / 1.3)), 2)
+        if not benji:
+            coast_mi = round((coast_mi + (expedition_power / 70) * (army_level / 1.3)), 2)
+        else:
+            coast_mi = round((coast_mi - (expedition_power / 70) * (army_level / 1.3)), 2)
         coast_knowing.text = f'Coastline: {coast_mi}mi'
     else:
         downgrade.play()
@@ -586,17 +594,19 @@ def random_event():
     global ship_
     global shipping
     action1 = '+$500'
-    action2 = 'Ronaldo Edits (for Benji)!'
+    action2 = 'RONALDO EDITS!'
     action3 = 'Money Doubled!'
     action4 = '-$500'
     action5 = 'Money Divided'
-    action6 = 'Your IP is:'
     actions = [action1,action1,action1,action1,action1,action3,action4,action4,action4,action4,action5]
     action = random.choice(actions)
     if action == action1:
         upgrade.play()
         money = money + 500
-        money_knowing.text = [f'You have ${money:.0f}', f'Money Per Tick: ${money_per_second}']
+        if not benji:
+            money_knowing.text = [f'You have ${money:.0f}', f'Money Per Tick: ${money_per_second}']
+        else:
+            money_knowing.text = [f'You have {money:.0f} Steps', f'Steps Per Tick: ${money_per_second}']
     elif action == action2:
         upgrade.play()
         downgrade.play()
@@ -607,33 +617,40 @@ def random_event():
             'https://www.youtube.com/shorts/EvJPWyKiVfU'
         ]
         url = random.choice(urls)
-        if platform.system() == 'emscripten':
-            import js
-            js.window.open(url, '_blank')
+        if platform.system() == 'Emscripten':
+            platform.window.open(url, '_blank')
         else:
             import webbrowser
             webbrowser.open(url)
     elif action == action3:
         upgrade.play()
         money = money * 2
-        money_knowing.text = [f'You have ${money:.0f}', f'Money Per Tick: ${money_per_second}']
+        if not benji:
+            money_knowing.text = [f'You have ${money:.0f}', f'Money Per Tick: ${money_per_second}']
+        else:
+            money_knowing.text = [f'You have {money:.0f} Steps', f'Steps Per Tick: ${money_per_second}']
     elif action == action4:
         downgrade.play()
         money = money - 500
         if money < 0:
             money = 0
-        money_knowing.text = [f'You have ${money:.0f}', f'Money Per Tick: ${money_per_second}']
+        if not benji:
+            money_knowing.text = [f'You have ${money:.0f}', f'Money Per Tick: ${money_per_second}']
+        else:
+            money_knowing.text = [f'You have {money:.0f} Steps', f'Steps Per Tick: ${money_per_second}']
     elif action == action5:
         downgrade.play()
         money = money // 1.5
-        money_knowing.text = [f'You have ${money:.0f}', f'Money Per Tick: ${money_per_second}']
+        if not benji:
+            money_knowing.text = [f'You have ${money:.0f}', f'Money Per Tick: ${money_per_second}']
+        else:
+            money_knowing.text = [f'You have {money:.0f} Steps', f'Steps Per Tick: ${money_per_second}']
     ship_.rect.width = 0
     ship_.rect.height = 0
     shipping = False
-    if action != action6:
-        x2 = ship_.rect.x + 125
-        y2 = ship_.rect.y + 100
-        floating_texts2.append({'x': x2, 'y': y2, 'text': f"{action}", 'timer': 30})
+    x2 = ship_.rect.x + 125
+    y2 = ship_.rect.y + 100
+    floating_texts2.append({'x': x2, 'y': y2, 'text': f"{action}", 'timer': 30})
 def move(thing):
     thing.rect.x = thing.rect.x + 3
 def multiply_efficiency():
@@ -647,18 +664,24 @@ def multiply_efficiency():
         multiplier_end_time = pygame.time.get_ticks() + 30_000
         per_tick_efficiency_upgrade = round(per_tick_efficiency_upgrade * 1.15, 0)
         money = money - per_tick_efficiency_upgrade
-        money_knowing.text = [f'You have ${money:.0f}', f'Money Per Tick: ${money_per_second}']
+        if not benji:
+            money_knowing.text = [f'You have ${money:.0f}', f'Money Per Tick: ${money_per_second}']
+        else:
+            money_knowing.text = [f'You have {money:.0f} Steps', f'Steps Per Tick: ${money_per_second}']
         upgrade4.text = ['Multiply Money Per Tick', '(ACTIVE - 30s)']
 def increase_tick_speed():
     global tick_speed
     global upgrade_tick_speed_price
     global money
-    if money >= upgrade_tick_speed_price and tick_speed > 50:
+    if money >= upgrade_tick_speed_price and tick_speed > 10:
         upgrade.play()
         tick_speed = tick_speed - random.randint(35, 70)
         tick_speed = max(50, tick_speed)
         money = money - upgrade_tick_speed_price
-        money_knowing.text = [f'You have ${money:.0f}', f'Money Per Tick: ${money_per_second}']
+        if not benji:
+            money_knowing.text = [f'You have ${money:.0f}', f'Money Per Tick: ${money_per_second}']
+        else:
+            money_knowing.text = [f'You have {money:.0f} Steps', f'Steps Per Tick: ${money_per_second}']
         tick_speed_knowing.text = f'Tick Speed: {tick_speed}ms'
         upgrade_tick_speed_price = round(upgrade_tick_speed_price * (1.2 * random.uniform(1.1, 1.3)),0)
         upgrade3.text[1] = f'(Price = ${upgrade_tick_speed_price:.0f})'
@@ -672,7 +695,10 @@ def add_money_per_second():
     if ch:
         ch.set_volume(0.5)
     money = money + money_per_second
-    money_knowing.text = [f'You have ${money:.0f}', f'Money Per Tick: ${money_per_second}']
+    if not benji:
+        money_knowing.text = [f'You have ${money:.0f}', f'Money Per Tick: ${money_per_second}']
+    else:
+        money_knowing.text = [f'You have {money:.0f} Steps', f'Steps Per Tick: ${money_per_second}']
 def upgrade_money_per_second():
     global base_money_per_second, upgrade_money_per_second_price, money
     if money >= upgrade_money_per_second_price:
@@ -680,10 +706,16 @@ def upgrade_money_per_second():
         base_money_per_second += 1
         money -= upgrade_money_per_second_price
         upgrade_money_per_second_price = round(upgrade_money_per_second_price * 1.15, 0)
-        money_knowing.text = [f'You have ${money:.0f}',f'Money Per Tick: ${money_per_second}']
-        upgrade2.text = ['Upgrade Money Per Tick',f'(Price = ${upgrade_money_per_second_price:.0f})']
+        if not benji:
+            money_knowing.text = [f'You have ${money:.0f}',f'Money Per Tick: ${money_per_second}']
+            upgrade2.text = ['Upgrade Money Per Tick',f'(Price = ${upgrade_money_per_second_price:.0f})']
+        else:
+            money_knowing.text = [f'You have {money:.0f} Steps', f'Steps Per Tick: ${money_per_second}']
+            upgrade2.text = ['Upgrade Steps Per Tick', f'(Price = ${upgrade_money_per_second_price:.0f})']
 def get_font_for_button(button_):
     if isinstance(button_.text, list):
+        if button_ == benji_mode_button:
+            return font2, font2
         if button_ == import_button:
             return font2, font2
         total_length = sum(len(line) for line in button_.text)
@@ -757,7 +789,10 @@ def more_money_when_clicked():
     global money
     global x
     if money_per_click >= 10:
-        upgrade1.text = ['Upgrade Money Per Click', 'MAX LEVEL']
+        if not benji:
+            upgrade1.text = ['Upgrade Money Per Click', 'MAX LEVEL']
+        else:
+            upgrade1.text = ['Upgrade Steps Per Click', 'MAX LEVEL']
         upgrade1.color = (200, 200, 200)
         upgrade1.pressed_text_color = (0, 0, 0)
         upgrade_money_price = 9999999999
@@ -768,10 +803,17 @@ def more_money_when_clicked():
         money_per_click += 1
         upgrade_money_price = round(upgrade_money_price * x)
         x += 0.05 * random.uniform(1.45454545, 2.5)
-        money_knowing.text = [f'You have ${money:.0f}', f'Money Per Tick: ${money_per_second}']
-        upgrade1.text = ['Upgrade Money Per Click', f'(Price = ${upgrade_money_price})']
+        if not benji:
+            money_knowing.text = [f'You have ${money:.0f}', f'Money Per Tick: ${money_per_second}']
+            upgrade1.text = ['Upgrade Money Per Click', f'(Price = ${upgrade_money_price})']
+        else:
+            money_knowing.text = [f'You have {money:.0f} Steps', f'Steps Per Tick: ${money_per_second}']
+            upgrade1.text = ['Upgrade Steps Per Click', f'(Price = {upgrade_money_price})']
         if money_per_click >= 10:
-            upgrade1.text = ['Upgrade Money Per Click', 'MAX LEVEL']
+            if not benji:
+                upgrade1.text = ['Upgrade Money Per Click', 'MAX LEVEL']
+            else:
+                upgrade1.text = ['Upgrade Steps Per Click', 'MAX LEVEL']
             upgrade1.color = (200, 200, 200)
             upgrade1.pressed_text_color = (0, 0, 0)
 
@@ -786,16 +828,25 @@ def add_money():
     x1,y1 = pygame.mouse.get_pos()
     x1 = x1 + random.randint(-50,0)
     if crit != 1:
-        floating_texts.append({'x': x1, 'y': y1, 'text': f"+${money_per_click}", 'timer': 30})
+        if not benji:
+            floating_texts.append({'x': x1, 'y': y1, 'text': f"+${money_per_click}", 'timer': 30})
+        else:
+            floating_texts.append({'x': x1, 'y': y1, 'text': f"+{money_per_click} Steps", 'timer': 30})
         money = money + money_per_click
     elif crit == 1:
         x1, y1 = pygame.mouse.get_pos()
         x1 = x1 - 100
-        floating_texts.append({'x': x1, 'y': y1, 'text': f"+${money_per_click * 10} (Critical!)", 'timer': 60})
+        if not benji:
+            floating_texts.append({'x': x1, 'y': y1, 'text': f"+${money_per_click * 10} (Critical!)", 'timer': 60})
+        else:
+            floating_texts.append({'x': x1, 'y': y1, 'text': f"+{money_per_click * 10} Steps (Critical!)", 'timer': 60})
         money = money + (money_per_click * 10)
     money_click.play()
     clicks = clicks + 1
-    money_knowing.text = [f'You have ${money:.0f}', f'Money Per Tick: ${money_per_second}']
+    if not benji:
+        money_knowing.text = [f'You have ${money:.0f}', f'Money Per Tick: ${money_per_second}']
+    else:
+        money_knowing.text = [f'You have {money:.0f} Steps', f'Steps Per Tick: {money_per_second}']
     if clicks > 2:
         money_button.text = ''
 def change_flag_up():
@@ -835,6 +886,93 @@ def change_flag_down():
 def do():
     global SETTINGS
     SETTINGS = False
+background_msc = None
+def benji_all_buttons():
+    global money, money_per_second, tick_speed, coast_mi, country_name
+    global upgrade_money_price, upgrade_money_per_second_price, upgrade_tick_speed_price
+    global per_tick_efficiency_upgrade, critical_clicks_price, soldier_price
+    global tank_price, plane_price, heal_price, logistic_enhancement_price
+    global chance_of_success, ascend_miles, money_per_click, critical_clicks_chance
+    if money_per_click >= 10:
+        upgrade1.text = ['Upgrade Steps Per Click', 'MAX LEVEL']
+    else:
+        upgrade1.text = ['Upgrade Steps Per Click', f'(Price = {upgrade_money_price})']
+
+    upgrade2.text = ['Upgrade Steps Per Tick', f'(Price = {upgrade_money_per_second_price})']
+
+    if tick_speed <= 10:
+        upgrade3.text = [' Reduce Tick Speed ', 'MAX LEVEL']
+    else:
+        upgrade3.text = [' Reduce Tick Speed ', f'(Price = {upgrade_tick_speed_price})']
+    if pygame.time.get_ticks() < multiplier_end_time:
+        upgrade4.text = ['Multiply Steps Per Tick', '(ACTIVE - 30s)']
+    else:
+        upgrade4.text = ['Multiply Steps Per Tick', f'(30 seconds | Price = {per_tick_efficiency_upgrade})']
+
+    if critical_clicks_chance <= 10:
+        upgrade5.text = ['Upgrade CritStep Chance', 'MAX LEVEL']
+    else:
+        upgrade5.text = ['Upgrade CritStep Chance', f'(Price = {critical_clicks_price})']
+    upgrade6.text = ['Hire Infantry Soldier', f'(Price = {soldier_price:.0f})']
+    upgrade7.text = ['Purchase Infantry Tank', f'(Price = {tank_price:.0f})']
+    upgrade8.text = ['Purchase Fighter Jet', f'(Price = {plane_price:.0f})']
+    upgrade9.text = ['Heal Military Units', f'(Price = {heal_price:.0f})']
+    if pygame.time.get_ticks() < reducer_end_time:
+        upgrade10.text = ['Enhance Logistics', '(ACTIVE - 30s)']
+    else:
+        upgrade10.text = ['Enhance Logistics', f'30 Seconds | (Price = {logistic_enhancement_price:.0f})']
+    money_knowing.text = [f'You have {money:.0f} Steps', f'Money Per Tick: {money_per_second}']
+    coast_knowing.text = f'Coastline: {coast_mi}mi'
+    tick_speed_knowing.text = f'Tick speed = {tick_speed}ms'
+    name_of_country.text = f'Country: {country_name}'
+    ascend_button.text = ['ASCEND', f'{ascend_miles}mi Coastline Required']
+    send_expedition.text = ['Send Expedition!', f'Chance of Success: {chance_of_success}%']
+def check_benji():
+    global bg_msc, background_msc
+    if benji:
+        money_button.image, money_button.pressed_image = ronaldo, ronaldo
+        island.image = map
+        flag_panel.image = bridge
+        island.rect.y = 125
+        bg_msc.stop()
+        bg_msc2.play(-1)
+        benji_all_buttons()
+    else:
+        money_button.image = money_buttoN
+        island.image = island_img
+        flag_panel.image = pygame.transform.scale(current_flag, (250, 175))
+        island.rect.y = 5
+        bg_msc2.stop()
+        bg_msc.play(-1)
+        update_all_buttons()
+def benji_mode():
+    global benji
+    global benji_mode_button
+    if not benji:
+        pygame.mixer.pause()
+        try:
+            set_benji_mode = platform.window.confirm("Do you want to enable Fetuccini Mode? Iykyk")
+        except:
+            set_benji_mode = True
+        pygame.mixer.unpause()
+        if set_benji_mode:
+            benji = True
+            benji_mode_button.text[0] = "DISABLE"
+        else:
+            benji = False
+    else:
+        pygame.mixer.pause()
+        try:
+            set_benji_mode = platform.window.confirm("Do you want to disable Fetuccini Mode?")
+        except:
+            set_benji_mode = True
+        pygame.mixer.unpause()
+        if set_benji_mode:
+            benji = False
+            benji_mode_button.text[0] = "ENABLE"
+        else:
+            benji = True
+    check_benji()
 with open('assets/country_names/country_names.txt', 'r') as names:
     name = names.read().splitlines()
 CREDITS = 'credits'
@@ -849,7 +987,7 @@ current_upgrade_screen = UPGRADE1
 country_name = str(random.choice(name))
 
 #variables
-money = 0
+money = 100000
 army_level = 1
 coast_mi = 0.00
 coast_percent = 0.00
@@ -857,7 +995,7 @@ step_sheets = 0
 clicks = 0
 money_per_click = 1
 upgrade_money_price = 50
-tick_speed = 1000
+tick_speed = 10
 x = 1.2
 ascend_miles = 10
 base_money_per_second = 0
@@ -875,7 +1013,7 @@ planes = []
 plane_price = 5000
 expedition_power = 0
 chance_of_success = len(soldiers) + len(tanks) + len(planes)
-ship_spawn_rate = 4321
+ship_spawn_rate = 6000
 spawn_end_time = 20_000
 critical_clicks_price = 800
 critical_clicks_chance = 100
@@ -886,6 +1024,7 @@ available_to_buy = True
 enhancement_active = False
 multiplier_active = False
 shipping = False
+benji = False
 
 #load sounds
 click = pygame.mixer.Sound('assets/sounds/click.ogg')
@@ -897,10 +1036,16 @@ success = pygame.mixer.Sound('assets/sounds/success.ogg')
 swoosh = pygame.mixer.Sound('assets/sounds/swoosh.ogg')
 swoosh_back = pygame.mixer.Sound('assets/sounds/swoosh2.ogg')
 bg_msc = pygame.mixer.Sound('assets/sounds/bg_msc.ogg')
+benji1 = pygame.mixer.Sound('assets/sounds/benji_msc.ogg')
+benji2 = pygame.mixer.Sound('assets/sounds/benji_msc2.0.ogg')
+benji3 = pygame.mixer.Sound('assets/sounds/benji_msc3.0.ogg')
+bg_msc2 = pygame.mixer.Sound('assets/sounds/bg_msc2.ogg')
+pipe = pygame.mixer.Sound('assets/sounds/pipe.ogg')
 pygame.mixer.set_num_channels(8)
+
 #load images
 settings_ = pygame.image.load('assets/button_images/settings_icon.png').convert_alpha()
-settings_ = pygame.transform.scale(settings_, (40,40))
+settings_ = pygame.transform.scale(settings_, (42,42))
 menu_bg = pygame.image.load("assets/menu.png").convert()
 menu_bg = pygame.transform.scale(menu_bg, (WIDTH, HEIGHT))
 game_bg = pygame.image.load("assets/game.png").convert()
@@ -955,6 +1100,12 @@ plane_ = pygame.image.load('assets/button_images/plane.png').convert_alpha()
 plane_ = pygame.transform.scale(plane_, (80, 80))
 island_img = pygame.image.load('assets/button_images/island.png').convert_alpha()
 island_img = pygame.transform.scale(island_img, (400, 450))
+ronaldo = pygame.image.load('assets/button_images/ronaldo.jpg')
+ronaldo = pygame.transform.scale(ronaldo, (350, 350))
+bridge = pygame.image.load('assets/button_images/bridge.jpg')
+bridge = pygame.transform.scale(bridge, (250,175))
+map = pygame.image.load('assets/button_images/map.jpeg')
+map = pygame.transform.scale(map, (400, 210))
 flags = [flag1,flag2,flag3,flag5,flag6,flag7,flag8,flag9,flag10,flag11,flag12,flag13,flag14,flag15]
 current_flag = flags[0]
 i = 0
@@ -989,7 +1140,7 @@ ascend_button = Button(pygame.Rect(890, 10, 300, 100), text=['ASCEND', f'{ascend
 black_line1 = Button(pygame.Rect(870, 120, 400, 5), color=(0,0,0))
 black_line2 = Button(pygame.Rect(870, 120, 5, 700), color = (0,0,0))
 tick_speed_knowing = Button(pygame.Rect(135, 80, 100, 20), text = f'Tick speed = {tick_speed}ms', text_color=(0,0,0), pressed_text_color=(0,0,0))
-settings_button = Button(pygame.Rect(6, 8, 40, 40), image=settings_, pressed_image=settings_, action=settings, border_width=3, border_color=(0,0,0), color=(255,255,255))
+settings_button = Button(pygame.Rect(1, 1, 40, 40), image=settings_, pressed_image=settings_, action=settings, color=(255,255,255))
 send_expedition = Button(pygame.Rect(415, 640, 400, 100), text=['Send Expedition!', f'Chance of Success: {chance_of_success}%'], text_color=(0,0,0), action=send_an_expedition)
 coast_knowing = Button(pygame.Rect(415, 10, 400, 100), text=f'Coastline: {coast_mi}mi',text_color=(0,0,0), border_radius=0, pressed_text_color=(0,0,0))
 wood_ = Button(pygame.Rect(870,120,330,630), image=wood, pressed_image=wood)
@@ -1025,7 +1176,8 @@ main_menu_button = Button(pygame.Rect(475, 360, 300, 100), text='Exit Game', act
 settings_text = Button(pygame.Rect(375, 150, 500, 100), text='Settings', text_color=(255,255,255), pressed_text_color=(255,255,255), color=None)
 x_button = Button(pygame.Rect(1110, 20, 70, 70), text='X',action=do)
 x_button3 = Button(pygame.Rect(815, 250, 50, 50), text="X", border_color=(0,0,0), border_radius=0, border_width=3)
-settings_buttons = [tar_and_feather, export_button, main_menu_button, settings_text, x_button]
+benji_mode_button = Button(pygame.Rect(475, 470, 300, 100), text=['ENABLE',  'FETUCCINI MODE'], text_color=(255,0,0), action=benji_mode)
+settings_buttons = [tar_and_feather, export_button, main_menu_button, settings_text, x_button, benji_mode_button]
 
 stats = {
     'clicks' : clicks,
@@ -1035,6 +1187,7 @@ stats = {
     'planes' : len(expedition['planes']),
     'coast' : coast_mi
 }
+music = False
 async def main():
     global current_screen, current_upgrade_screen, current_flag, i, money, clicks
     global money_per_second, base_money_per_second, multiplier, multiplier_active, multiplier_end_time
@@ -1042,7 +1195,7 @@ async def main():
     global upgrade_money_per_second_price, per_tick_efficiency_upgrade, critical_clicks_price, critical_clicks_chance
     global soldier_price, tank_price, plane_price, expedition_power, chance_of_success, logistic_enhancement_price
     global shipping, moving, available_to_buy, last_money_tick, coast_mi, enhancement_active, reducer, reducer_end_time
-    global SETTINGS
+    global SETTINGS, music
     running = True
     while running:
         for event in pygame.event.get():
@@ -1055,11 +1208,9 @@ async def main():
             if current_screen == MENU:
                 if start_button.handle_event(event):
                     select_.play()
-                    try:
-                        bg_msc.set_volume(0.654321)
-                        bg_msc.play(-1)
-                    except Exception:
-                        print('Music Error')
+                    if not music:
+                        bg_msc.play()
+                        music = True
                     if go_to_flag:
                         current_screen = COUNTRY
                     else:
@@ -1127,7 +1278,8 @@ async def main():
                 achievement_queue.sort(key = lambda it: it.criterion)
                 next_ach = achievement_queue.pop(0)
                 swoosh.play()
-                current_popup = show_achievement(next_ach.name, next_ach.description)
+                if not benji:
+                    current_popup = show_achievement(next_ach.name, next_ach.description)
             if expedition["state"] == "going":
                 done = True
                 for ss, _, _ in expedition["soldiers"]:
@@ -1178,7 +1330,6 @@ async def main():
                         pp.rect.y = orig_y
                 if done:
                     expedition_it()
-
                     soldiers.extend([s[0] for s in expedition["soldiers"]])
                     tanks.extend([t[0] for t in expedition["tanks"]])
                     planes.extend([p[0] for p in expedition["planes"]])
@@ -1216,7 +1367,11 @@ async def main():
             if multiplier_active and now >= multiplier_end_time:
                 multiplier = 1.0
                 multiplier_active = False
-                upgrade4.text = ['Multiply Money Per Tick', f'(30 seconds | Price = ${per_tick_efficiency_upgrade:.0f})']
+                if not benji:
+                    upgrade4.text = ['Multiply Money Per Tick', f'(30 seconds | Price = ${per_tick_efficiency_upgrade:.0f})']
+                else:
+                    upgrade4.text = ['Multiply Steps Per Tick',
+                                     f'(30 seconds | Price = {per_tick_efficiency_upgrade:.0f})']
             elif multiplier_active and now < multiplier_end_time or money_per_second < 1:
                 upgrade4.color = (200,200,200)
                 upgrade4.pressed_text_color = (0,0,0)
@@ -1226,10 +1381,16 @@ async def main():
                 soldier_price = soldier_price * reducer
                 tank_price = tank_price * reducer
                 plane_price = plane_price * reducer
-                upgrade6.text[1] = f'(Price = ${soldier_price:.0f})'
-                upgrade7.text[1] = f'(Price = ${tank_price:.0f})'
-                upgrade8.text[1] = f'(Price = ${plane_price:.0f})'
-                upgrade10.text[1] = f'30 Seconds | (Price = ${logistic_enhancement_price:.0f})'
+                if not benji:
+                    upgrade6.text[1] = f'(Price = ${soldier_price:.0f})'
+                    upgrade7.text[1] = f'(Price = ${tank_price:.0f})'
+                    upgrade8.text[1] = f'(Price = ${plane_price:.0f})'
+                    upgrade10.text[1] = f'30 Seconds | (Price = ${logistic_enhancement_price:.0f})'
+                else:
+                    upgrade6.text[1] = f'(Price = {soldier_price:.0f})'
+                    upgrade7.text[1] = f'(Price = {tank_price:.0f})'
+                    upgrade8.text[1] = f'(Price = {plane_price:.0f})'
+                    upgrade10.text[1] = f'30 Seconds | (Price = {logistic_enhancement_price:.0f})'
                 upgrade10.color = (255, 255, 255)
                 upgrade10.pressed_text_color = (200, 200, 200)
                 enhancement_active = False
@@ -1312,6 +1473,12 @@ async def main():
                 if not alive:
                     swoosh_back.play()
                     current_popup = None
+            if benji:
+                if random.randint(1, 3000) == 1:
+                    random.choice([benji1, benji2, benji3]).play()
+            if benji:
+                if random.randint(1, 1000) == 1:
+                    pipe.play()
             if shipping is False:
                 global ship_spawn_rate
                 if random.randint(1, ship_spawn_rate) == 1:
@@ -1319,7 +1486,6 @@ async def main():
                     ship_.rect.x = -100
                     ship_.rect.width = 300
                     ship_.rect.height = 200
-                    ship_spawn_rate = 4321
                     shipping = True
             if shipping is True:
                 move(ship_)
