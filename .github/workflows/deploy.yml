@@ -25,7 +25,7 @@ jobs:
 
     - name: Build Web Version
       run: |
-        python3 -m pygbag --build --template no_package --title "Coastline Clicker" .
+        python3 -m pygbag --build --template no_package --no_ime --title "Coastline Clicker" .
 
     - name: Deploy to GitHub Pages
       uses: JamesIves/github-pages-deploy-action@v4
