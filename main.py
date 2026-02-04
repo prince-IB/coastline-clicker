@@ -144,7 +144,11 @@ def handle_instant_import():
     encoded_str = None
     if platform.system() == "Emscripten":
         from platform import window
+        pygame.mixer.pause()
+        bg_msc.stop()
         encoded_str = window.prompt("Paste your save file code below (Ctrl + V):")
+        pygame.mixer.unpause()
+        bg_msc.play()
     else:
         print("Import requested. Popups only work in the browser.")
         return
@@ -229,8 +233,10 @@ def export_save():
     encoded = base64.b64encode(encrypted).decode()
     if platform.system() == 'Emscripten':
         pygame.mixer.pause()
+        bg_msc.stop()
         platform.window.prompt("This is your save code, copy it and keep it safe!:", encoded)
         pygame.mixer.unpause()
+        bg_msc.play()
     else:
         import pyperclip
         pyperclip.copy(encoded)
@@ -394,7 +400,7 @@ def expedition_it():
             send_expedition.text[1] = f'Chance of success: {chance_of_success}%'
     for entry in expedition['planes'][:]:
         pp, orig_x, orig_y = entry
-        pp.hp = pp.hp - random.randint(80, 160)
+        pp.hp = pp.hp - random.randint(60, 120)
         if pp.hp <= 0:
             missing_pp.append(orig_x)
             missing_pp.append(orig_y)
@@ -599,9 +605,9 @@ def increase_crit_chance():
     global upgrade5
     if money >= critical_clicks_price and critical_clicks_chance >= 10:
         upgrade.play()
-        critical_clicks_chance = critical_clicks_chance - 11
-        if critical_clicks_chance < 1:
-            critical_clicks_chance = 1
+        critical_clicks_chance = critical_clicks_chance - random.randint(7, 15)
+        if critical_clicks_chance < 10:
+            critical_clicks_chance = 10
         money = money - critical_clicks_price
         critical_clicks_price = round(critical_clicks_price * 1.3, 0)
         if not benji:
@@ -739,7 +745,7 @@ def upgrade_money_per_second():
         upgrade.play()
         base_money_per_second += 1
         money -= upgrade_money_per_second_price
-        upgrade_money_per_second_price = round(upgrade_money_per_second_price * 1.15, 0)
+        upgrade_money_per_second_price = round(upgrade_money_per_second_price * 1.2, 0)
         if not benji:
             money_knowing.text = [f'You have: ${money:.0f}',f'Money Per Tick: ${money_per_second}']
             upgrade2.text = ['Upgrade Money Per Tick',f'(Price = ${upgrade_money_per_second_price:.0f})']
@@ -857,24 +863,23 @@ def add_money():
     global money
     global money_button
     global clicks
-    global x1,y1
     crit = random.randint(1, critical_clicks_chance)
     x1,y1 = pygame.mouse.get_pos()
     x1 = x1 + random.randint(-50,0)
     if crit != 1:
         if not benji:
-            floating_texts.append({'x': x1, 'y': y1, 'text': f"+${money_per_click}", 'timer': 30})
+            floating_texts.append({'x': x1, 'y': y1, 'text': f"+${money_per_click}", 'timer': 20})
         else:
-            floating_texts.append({'x': x1, 'y': y1, 'text': f"+{money_per_click} Steps", 'timer': 30})
+            floating_texts.append({'x': x1, 'y': y1, 'text': f"+{money_per_click} Steps", 'timer': 20})
         money = money + money_per_click
     elif crit == 1:
         x1, y1 = pygame.mouse.get_pos()
         x1 = x1 - 100
         if not benji:
-            floating_texts.append({'x': x1, 'y': y1, 'text': f"+${money_per_click * 10} (Critical!)", 'timer': 60})
+            floating_texts.append({'x': x1, 'y': y1, 'text': f"+${money_per_click * 5} (Critical!)", 'timer': 40})
         else:
-            floating_texts.append({'x': x1, 'y': y1, 'text': f"+{money_per_click * 10} Steps (Critical!)", 'timer': 60})
-        money = money + (money_per_click * 10)
+            floating_texts.append({'x': x1, 'y': y1, 'text': f"+{money_per_click * 5} Steps (Critical!)", 'timer': 40})
+        money = money + (money_per_click * 5)
     money_click.play()
     clicks = clicks + 1
     if not benji:
@@ -964,13 +969,13 @@ def benji_all_buttons():
 def check_benji():
     if benji:
         money_button.image, money_button.pressed_image = ronaldo, ronaldo
-        island.image = map
+        island.image, island.pressed_image = map, map
         flag_panel.image = bridge
         island.rect.y = 125
         benji_all_buttons()
     else:
         money_button.image, money_button.pressed_image = money_buttoN, money_buttoN_pressed
-        island.image = island_img
+        island.image, island.pressed_image = island_img, island_img
         flag_panel.image = pygame.transform.scale(current_flag, (250, 175))
         island.rect.y = 5
         update_all_buttons()
@@ -1008,27 +1013,27 @@ clicks = 0
 money_per_click = 1
 upgrade_money_price = 50
 tick_speed = 1000
-x = 1.2
+x = 1.54
 ascend_miles = 10
 base_money_per_second = 0
 money_per_second = 0
-upgrade_money_per_second_price = 150
+upgrade_money_per_second_price = 100
 upgrade_tick_speed_price = 300
 per_tick_efficiency_upgrade = 1000
 multiplier_end_time = 0
 original_money_per_second = 0
 soldiers = []
-soldier_price = 350
+soldier_price = 250
 tanks = []
-tank_price = 1000
+tank_price = 1500
 planes = []
-plane_price = 5000
+plane_price = 6000
 expedition_power = 0
 chance_of_success = len(soldiers) + len(tanks) + len(planes)
 ship_spawn_rate = 6000
 spawn_end_time = 20_000
-critical_clicks_price = 800
-critical_clicks_chance = 100
+critical_clicks_price = 1200
+critical_clicks_chance = 200
 logistic_enhancement_price = 3000
 heal_price = 1750
 moving = False
