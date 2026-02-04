@@ -96,7 +96,7 @@ async def custom_site():
     # mount apk
 
     cfg = {
-        "io": "url",
+        "io": "fetch",
         "type":"mount",
         "mount" : {
             "point" : appdir.as_posix(),
@@ -141,7 +141,7 @@ async def custom_site():
     while embed.counter()<0:
         await asyncio.sleep(.1)
 
-    main = appdir / "assets" / "main.py"
+    main = appdir / "main.py"
 
     # start async top level machinery and add a console.
     await TopLevel_async_handler.start_toplevel(platform.shell, console=window.python.config.debug)
