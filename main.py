@@ -1210,10 +1210,6 @@ async def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            if event.type == pygame.WINDOWFOCUSLOST:
-                pygame.mixer.pause()
-            if event.type == pygame.WINDOWFOCUSGAINED:
-                pygame.mixer.unpause()
             if current_screen == MENU:
                 if start_button.handle_event(event):
                     select_.play()
