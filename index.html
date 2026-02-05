@@ -151,7 +151,6 @@ async def custom_site():
     pg_bar(track.len)
     compose()
 
-
     # preloader will change dir and prepend it to sys.path
     platform.run_main(PyConfig, loaderhome= appdir / "assets", loadermain=None)
 
@@ -437,16 +436,17 @@ frameborder="1"
 
     async function custom_onload(debug_hidden) {
         // this is called before anything python is loaded
-        // make your js customization here
-        console.log(__FILE__, "custom_onload")
+        console.log(__FILE__, "custom_onload");
 
-        pyconsole.hidden = True
-        system.hidden = True
-        transfer.hidden = True
-        info.hidden = True
-        box.hidden =  True
-
+        // hide the terminal and other debug elements
+        document.getElementById("pyconsole").hidden = true;
+        document.getElementById("system").hidden = true;
+        document.getElementById("transfer").hidden = true;
+        document.getElementById("info").hidden = true;
+        document.getElementById("box").hidden = true;
     }
+    </script>
+
 
     function custom_prerun(){
         // no python main and no (MEMFS + VFS) yet.
@@ -526,7 +526,7 @@ if pygame.mixer.get_init():
     function frame_online(url) {
         window.frames["iframe"].location = url;
     }
-
+    
     </script>
 
 </body>
