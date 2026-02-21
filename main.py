@@ -32,7 +32,7 @@ pygame.mixer.pre_init(44100, -16, 2, 2048)
 pygame.mixer.init()
 WIDTH, HEIGHT = 1200, 750
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Coastline Clicker v1.0")
+pygame.display.set_caption("Coastline Clicker v1.0.1")
 current_bg_music = 'normal'
 clock = pygame.time.Clock()
 multiplier = 1.0
