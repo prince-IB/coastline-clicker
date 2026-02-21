@@ -32,7 +32,7 @@ pygame.mixer.pre_init(44100, -16, 2, 2048)
 pygame.mixer.init()
 WIDTH, HEIGHT = 1200, 750
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Coastline Clicker v1.0.1")
+pygame.display.set_caption("Coastline Clicker v1.0.2")
 current_bg_music = 'normal'
 clock = pygame.time.Clock()
 multiplier = 1.0
@@ -109,52 +109,49 @@ def update_all_buttons():
     if money_per_click >= 10:
         upgrade1.text = ['Upgrade Money Per Click', 'MAX LEVEL']
     else:
-        upgrade1.text = ['Upgrade Money Per Click', f'(Price = ${upgrade_money_price})']
+        upgrade1.text = ['Upgrade Money Per Click', f'(Price = ${upgrade_money_price:.0f})']
 
-    upgrade2.text = ['Upgrade Money Per Tick', f'(Price = ${upgrade_money_per_second_price})']
+    upgrade2.text = ['Upgrade Money Per Tick', f'(Price = ${upgrade_money_per_second_price:.0f})']
 
     if tick_speed <= 10:
         upgrade3.text = [' Reduce Tick Speed ', 'MAX LEVEL']
     else:
-        upgrade3.text = [' Reduce Tick Speed ', f'(Price = ${upgrade_tick_speed_price})']
+        upgrade3.text = [' Reduce Tick Speed ', f'(Price = ${upgrade_tick_speed_price:.0f})']
     if pygame.time.get_ticks() < multiplier_end_time:
         upgrade4.text = ['Multiply Money Per Tick', '(ACTIVE - 30s)']
+        upgrade4.color = (200, 200, 200)
     else:
-        upgrade4.text = ['Multiply Money Per Tick', f'(30 seconds | Price = ${per_tick_efficiency_upgrade})']
+        upgrade4.text = ['Multiply Money Per Tick', f'(30 seconds | Price = ${per_tick_efficiency_upgrade:.0f})']
 
     if critical_clicks_chance <= 10:
         upgrade5.text = ['Upgrade CritClick Chance', 'MAX LEVEL']
+        upgrade5.color = (200, 200, 200)
     else:
-        upgrade5.text = ['Upgrade CritClick Chance', f'(Price = ${critical_clicks_price})']
+        upgrade5.text = ['Upgrade CritClick Chance', f'(Price = ${critical_clicks_price:.0f})']
     upgrade6.text = ['Hire Infantry Soldier', f'(Price = ${soldier_price:.0f})']
     upgrade7.text = ['Purchase Infantry Tank', f'(Price = ${tank_price:.0f})']
     upgrade8.text = ['Purchase Fighter Jet', f'(Price = ${plane_price:.0f})']
     upgrade9.text = ['Heal Military Units', f'(Price = ${heal_price:.0f})']
     if pygame.time.get_ticks() < reducer_end_time:
         upgrade10.text = ['Enhance Logistics', '(ACTIVE - 30s)']
+        upgrade10.color = (200, 200, 200)
     else:
         upgrade10.text = ['Enhance Logistics', f'30 Seconds | (Price = ${logistic_enhancement_price:.0f})']
-    money_knowing.text = [f'You have: ${money:.0f}', f'Money Per Tick: ${money_per_second}']
+    money_knowing.text = [f'You have: ${money:.0f}', f'Money Per Tick: ${money_per_second:.0f}']
     coast_knowing.text = f'Coastline: {coast_mi}mi'
-    tick_speed_knowing.text = f'Tick speed = {tick_speed}ms'
+    tick_speed_knowing.text = f'Tick speed = {tick_speed:.0f}ms'
     name_of_country.text = f'Country: {country_name}'
-    send_expedition.text = ['Send Expedition!', f'Chance of Success: {chance_of_success}%']
+    send_expedition.text = ['Send Expedition!', f'Chance of Success: {chance_of_success:.1f}%']
 def handle_instant_import():
     global banner, show_banner, current_screen, go_to_flag
-    encoded_str = None
     if platform.system() == "Emscripten":
         from platform import window
-        pygame.mixer.pause()
-        bg_msc.stop()
         encoded_str = window.prompt("Paste your save file code below (Ctrl + V):")
-        pygame.mixer.unpause()
-        bg_msc.play()
     else:
-        print("Import requested. Popups only work in the browser.")
         return
     if not encoded_str or encoded_str.strip() == "":
         banner = Button(pygame.Rect(365, 250, 500, 200),
-                        text=['Import Failed', 'No code was entered.', '(ERROR CODE 2: EMPTY INPUT)'],
+                        text=['Import Failed', 'Import code entered was invalid or blank', '(ERROR CODE 2: EMPTY INPUT)'],
                         border_width=3, border_radius=0, border_color=(0, 0, 0))
         show_banner = True
         return
@@ -176,7 +173,7 @@ def handle_instant_import():
         print(f"Import Error: {e}")
         banner = Button(pygame.Rect(365, 250, 500, 200),
                         text=['Import Failed', 'Invalid save code formatting.', 'Ensure you copied the full code.',
-                              '[ERROR CODE 1: INVALID CODE]'],
+                              '(ERROR CODE 1: INVALID CODE)'],
                         border_width=3, border_radius=0, border_color=(0, 0, 0))
         show_banner = True
 def main_menu():
@@ -774,7 +771,7 @@ def get_font_for_button(button_):
         elif length1 == length2 or (length1 + 1) == length2:
             return font3, font3
     elif isinstance(button_.text, str):
-        if button_.text == f'Tick speed = {tick_speed}ms':
+        if button_ == tick_speed_knowing:
             return font7
         length = len(button_.text)
         if length >= 25:
@@ -806,12 +803,12 @@ def check_money(button_, checker):
         button_.text[1] = f'MAX LEVEL'
         button_.color = (200,200,200)
         button_.pressed_text_color = (0,0,0)
-        upgrade_tick_speed_price = 999999999999999999999999
+        upgrade_tick_speed_price = 9 ** 900
     if button_.action == increase_crit_chance and critical_clicks_chance <= 10:
         button_.text[1] = 'MAX LEVEL'
         button_.color = (200, 200, 200)
         button_.pressed_text_color = (0, 0, 0)
-        critical_clicks_price = 999999999999999999
+        critical_clicks_price = 9 ** 900
     if multiplier_active and button_.action == multiply_efficiency:
         button_.color = (200,200,200)
         button_.pressed_color = (0,0,0)
@@ -933,23 +930,23 @@ def benji_all_buttons():
     if money_per_click >= 10:
         upgrade1.text = ['Upgrade Steps Per Click', 'MAX LEVEL']
     else:
-        upgrade1.text = ['Upgrade Steps Per Click', f'(Price = {upgrade_money_price})']
+        upgrade1.text = ['Upgrade Steps Per Click', f'(Price = {upgrade_money_price:.0f})']
 
-    upgrade2.text = ['Upgrade Steps Per Tick', f'(Price = {upgrade_money_per_second_price})']
+    upgrade2.text = ['Upgrade Steps Per Tick', f'(Price = {upgrade_money_per_second_price:.0f})']
 
     if tick_speed <= 10:
         upgrade3.text = [' Reduce Tick Speed ', 'MAX LEVEL']
     else:
-        upgrade3.text = [' Reduce Tick Speed ', f'(Price = {upgrade_tick_speed_price})']
+        upgrade3.text = [' Reduce Tick Speed ', f'(Price = {upgrade_tick_speed_price:.0f})']
     if pygame.time.get_ticks() < multiplier_end_time:
         upgrade4.text = ['Multiply Steps Per Tick', '(ACTIVE - 30s)']
     else:
-        upgrade4.text = ['Multiply Steps Per Tick', f'(30 seconds | Price = {per_tick_efficiency_upgrade})']
+        upgrade4.text = ['Multiply Steps Per Tick', f'(30 seconds | Price = {per_tick_efficiency_upgrade:.0f})']
 
     if critical_clicks_chance <= 10:
         upgrade5.text = ['Upgrade CritStep Chance', 'MAX LEVEL']
     else:
-        upgrade5.text = ['Upgrade CritStep Chance', f'(Price = {critical_clicks_price})']
+        upgrade5.text = ['Upgrade CritStep Chance', f'(Price = {critical_clicks_price:.0f})']
     upgrade6.text = ['Hire Infantry Soldier', f'(Price = {soldier_price:.0f})']
     upgrade7.text = ['Purchase Infantry Tank', f'(Price = {tank_price:.0f})']
     upgrade8.text = ['Purchase Fighter Jet', f'(Price = {plane_price:.0f})']
@@ -958,9 +955,9 @@ def benji_all_buttons():
         upgrade10.text = ['Enhance Logistics', '(ACTIVE - 30s)']
     else:
         upgrade10.text = ['Enhance Logistics', f'30 Seconds | (Price = {logistic_enhancement_price:.0f})']
-    money_knowing.text = [f'You have: {money:.0f} Steps', f'Money Per Tick: {money_per_second}']
+    money_knowing.text = [f'You have: {money:.0f} Steps', f'Money Per Tick: {money_per_second:.0f}']
     coast_knowing.text = f'Coastline: {coast_mi}mi'
-    tick_speed_knowing.text = f'Tick speed = {tick_speed}ms'
+    tick_speed_knowing.text = f'Tick speed = {tick_speed:.0f}ms'
     name_of_country.text = f'Country: {country_name}'
     send_expedition.text = ['Send Expedition!', f'Chance of Success: {chance_of_success}%']
 
@@ -1008,7 +1005,7 @@ coast_mi = 0.00
 coast_percent = 0.00
 step_sheets = 0
 clicks = 0
-money_per_click = 0
+money_per_click = 1
 upgrade_money_price = 50
 tick_speed = 1000
 x = 1.44
@@ -1204,7 +1201,6 @@ async def main():
     global SETTINGS, music, show_banner
     running = True
     while running:
-        print(pygame.mixer.get_busy())
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -1218,8 +1214,8 @@ async def main():
                         current_screen = COUNTRY
                     else:
                         current_screen = GAME
-                    if x_button3.handle_event(event):
-                        show_banner = False
+                if x_button3.handle_event(event):
+                    show_banner = False
                 if credits_button.handle_event(event):
                     current_screen = CREDITS
                 if import_button.handle_event(event):
