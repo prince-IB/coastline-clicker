@@ -226,23 +226,21 @@ def get_save_data():
     }
 def export_save():
     global banner,show_banner, current_screen
+    pygame.mixer.pause()
     data = get_save_data()
     json_bytes = json.dumps(data).encode()
     compressed = zlib.compress(json_bytes)
     encrypted = xor_cipher(compressed)
     encoded = base64.b64encode(encrypted).decode()
     if platform.system() == 'Emscripten':
-        pygame.mixer.pause()
-        bg_msc.stop()
         platform.window.prompt("This is your save code, copy it and keep it safe!:", encoded)
-        pygame.mixer.unpause()
-        bg_msc.play()
     else:
         import pyperclip
         pyperclip.copy(encoded)
     banner = Button(pygame.Rect(365, 250, 500, 200), text='Export Success!', border_width=3,             border_radius=0, border_color=(0, 0, 0))
     show_banner = True
     current_screen = GAME
+    pygame.mixer.unpause()
     return encoded
 def load_save_data(data):
     global money, army_level, coast_mi, coast_percent, step_sheets, clicks
@@ -1010,10 +1008,10 @@ coast_mi = 0.00
 coast_percent = 0.00
 step_sheets = 0
 clicks = 0
-money_per_click = 1
+money_per_click = 0
 upgrade_money_price = 50
 tick_speed = 1000
-x = 1.54
+x = 1.44
 ascend_miles = 10
 base_money_per_second = 0
 money_per_second = 0
@@ -1203,7 +1201,7 @@ async def main():
     global upgrade_money_per_second_price, per_tick_efficiency_upgrade, critical_clicks_price, critical_clicks_chance
     global soldier_price, tank_price, plane_price, expedition_power, chance_of_success, logistic_enhancement_price
     global shipping, moving, available_to_buy, last_money_tick, coast_mi, enhancement_active, reducer, reducer_end_time
-    global SETTINGS, music
+    global SETTINGS, music, show_banner
     running = True
     while running:
         print(pygame.mixer.get_busy())
@@ -1220,6 +1218,8 @@ async def main():
                         current_screen = COUNTRY
                     else:
                         current_screen = GAME
+                    if x_button3.handle_event(event):
+                        show_banner = False
                 if credits_button.handle_event(event):
                     current_screen = CREDITS
                 if import_button.handle_event(event):
@@ -1237,7 +1237,7 @@ async def main():
                 for button in settings_buttons:
                     button.handle_event(event)
                 if x_button3.handle_event(event):
-                    current_screen = GAME
+                    show_banner = False
             elif current_screen == CREDITS:
                 if X_button.handle_event(event):
                     current_screen = MENU
