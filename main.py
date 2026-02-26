@@ -32,7 +32,7 @@ pygame.mixer.pre_init(44100, -16, 2, 2048)
 pygame.mixer.init()
 WIDTH, HEIGHT = 1200, 750
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Coastline Clicker v1.0.2")
+pygame.display.set_caption("Coastline Clicker v1.0.3")
 current_bg_music = 'normal'
 clock = pygame.time.Clock()
 multiplier = 1.0
@@ -132,11 +132,7 @@ def update_all_buttons():
     upgrade7.text = ['Purchase Infantry Tank', f'(Price = ${tank_price:.0f})']
     upgrade8.text = ['Purchase Fighter Jet', f'(Price = ${plane_price:.0f})']
     upgrade9.text = ['Heal Military Units', f'(Price = ${heal_price:.0f})']
-    if pygame.time.get_ticks() < reducer_end_time:
-        upgrade10.text = ['Enhance Logistics', '(ACTIVE - 30s)']
-        upgrade10.color = (200, 200, 200)
-    else:
-        upgrade10.text = ['Enhance Logistics', f'30 Seconds | (Price = ${logistic_enhancement_price:.0f})']
+    upgrade10.text = ['Enhance Logistics', f'30 Seconds | (Price = ${logistic_enhancement_price:.0f})']
     money_knowing.text = [f'You have: ${money:.0f}', f'Money Per Tick: ${money_per_second:.0f}']
     coast_knowing.text = f'Coastline: {coast_mi}mi'
     tick_speed_knowing.text = f'Tick speed = {tick_speed:.0f}ms'
@@ -312,7 +308,7 @@ def enhance_logistics():
     enhancement_active = True
     reducer_end_time = pygame.time.get_ticks()
     money = money - logistic_enhancement_price
-    logistic_enhancement_price = round(logistic_enhancement_price * 1.1543, 0)
+    logistic_enhancement_price = round(logistic_enhancement_price * 1.5, 0)
     upgrade10.text[1] = f'(ACTIVE - 30s)'
     upgrade10.color = (200,200,200)
     upgrade10.pressed_text_color = (0,0,0)
@@ -320,7 +316,6 @@ def enhance_logistics():
         money_knowing.text[0] = f'You have: ${money:.0f}'
     else:
         money_knowing.text[0] = f'You have: {money:.0f} Steps'
-    reducer_end_time = 30000
 def heal_units():
     global soldiers
     global tanks
@@ -1005,13 +1000,13 @@ coast_mi = 0.00
 coast_percent = 0.00
 step_sheets = 0
 clicks = 0
-money_per_click = 1
+money_per_click = 300000
 upgrade_money_price = 50
-tick_speed = 1000
+tick_speed = 1
 x = 1.44
 ascend_miles = 10
-base_money_per_second = 0
-money_per_second = 0
+base_money_per_second = 3000
+money_per_second = 3000
 upgrade_money_per_second_price = 100
 upgrade_tick_speed_price = 300
 per_tick_efficiency_upgrade = 1000
@@ -1028,7 +1023,7 @@ chance_of_success = len(soldiers) + len(tanks) + len(planes)
 ship_spawn_rate = 6000
 spawn_end_time = 20_000
 critical_clicks_price = 1200
-critical_clicks_chance = 200
+critical_clicks_chance = 1
 logistic_enhancement_price = 3000
 heal_price = 1750
 moving = False
@@ -1370,7 +1365,7 @@ async def main():
             elif multiplier_active and now < multiplier_end_time or money_per_second < 1:
                 upgrade4.color = (200,200,200)
                 upgrade4.pressed_text_color = (0,0,0)
-            if enhancement_active and now >= reducer_end_time:
+            if enhancement_active and now >= reducer_end_time + 30_000:
                 reducer = 2
                 reducer_end_time = 0
                 soldier_price = soldier_price * reducer
